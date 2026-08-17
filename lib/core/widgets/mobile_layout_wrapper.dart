@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 
 class MobileLayoutWrapper extends StatelessWidget {
@@ -11,6 +12,16 @@ class MobileLayoutWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if the current route is an admin page. If so, bypass the mobile layout constraint.
+    String location = '';
+    try {
+      location = GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+    } catch (_) {}
+
+    if (location.startsWith('/admin')) {
+      return child;
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final double width = constraints.maxWidth;

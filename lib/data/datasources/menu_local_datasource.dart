@@ -6,22 +6,27 @@ abstract class MenuLocalDataSource {
   Future<List<MenuItem>> getMenuItems({
     String? categoryId,
     String? searchQuery,
+    bool includeInactive = false,
   });
   Future<MenuItem?> getMenuItemDetail(String id);
   Future<List<MenuItem>> getRecommendedItems();
+  Future<void> addMenuItem(MenuItem item);
+  Future<void> updateMenuItem(MenuItem item);
+  Future<void> deleteMenuItem(String id);
+  Future<void> addCategory(MenuCategory category);
 }
 
 class MenuLocalDataSourceImpl implements MenuLocalDataSource {
-  final List<MenuCategory> _categories = const [
-    MenuCategory(id: 'cat_rice', name: 'Rice'),
-    MenuCategory(id: 'cat_noodles', name: 'Noodles'),
-    MenuCategory(id: 'cat_chicken', name: 'Chicken'),
-    MenuCategory(id: 'cat_snack', name: 'Snack'),
-    MenuCategory(id: 'cat_drink', name: 'Drink'),
-    MenuCategory(id: 'cat_dessert', name: 'Dessert'),
+  late final List<MenuCategory> _categories = [
+    const MenuCategory(id: 'cat_rice', name: 'Rice'),
+    const MenuCategory(id: 'cat_noodles', name: 'Noodles'),
+    const MenuCategory(id: 'cat_chicken', name: 'Chicken'),
+    const MenuCategory(id: 'cat_snack', name: 'Snack'),
+    const MenuCategory(id: 'cat_drink', name: 'Drink'),
+    const MenuCategory(id: 'cat_dessert', name: 'Dessert'),
   ];
 
-  late final List<MenuItem> _menuItems = [
+  late List<MenuItem> _menuItems = [
     const MenuItem(
       id: 'item_katsu',
       name: 'Chicken Katsu',
@@ -413,9 +418,14 @@ class MenuLocalDataSourceImpl implements MenuLocalDataSource {
   Future<List<MenuItem>> getMenuItems({
     String? categoryId,
     String? searchQuery,
+    bool includeInactive = false,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
     Iterable<MenuItem> items = _menuItems;
+
+    if (!includeInactive) {
+      items = items.where((item) => item.isActive);
+    }
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final query = searchQuery.toLowerCase().trim();
@@ -442,6 +452,35 @@ class MenuLocalDataSourceImpl implements MenuLocalDataSource {
   @override
   Future<List<MenuItem>> getRecommendedItems() async {
     await Future.delayed(const Duration(milliseconds: 200));
-    return _menuItems.where((item) => item.isRecommended).toList();
+    return _menuItems.where((item) => item.isRecommended && item.isActive).toList();
+  }
+
+  @override
+  Future<void> addMenuItem(MenuItem item) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    _menuItems.add(item);
+  }
+
+  @override
+  Future<void> updateMenuItem(MenuItem item) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _menuItems.indexWhere((element) => element.id == item.id);
+    if (index >= 0) {
+      _menuItems[index] = item;
+    } else {
+      throw Exception('Menu item not found');
+    }
+  }
+
+  @override
+  Future<void> deleteMenuItem(String id) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _menuItems.removeWhere((element) => element.id == id);
+  }
+
+  @override
+  Future<void> addCategory(MenuCategory category) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _categories.add(category);
   }
 }

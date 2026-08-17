@@ -41,6 +41,8 @@ class MenuItem extends Equatable {
   final bool isRecommended;
   final String categoryId;
   final List<MenuVariant> variants;
+  final int stock;
+  final bool isActive;
 
   const MenuItem({
     required this.id,
@@ -51,7 +53,35 @@ class MenuItem extends Equatable {
     this.isRecommended = false,
     required this.categoryId,
     this.variants = const [],
+    this.stock = 50,
+    this.isActive = true,
   });
+
+  MenuItem copyWith({
+    String? id,
+    String? name,
+    String? description,
+    double? price,
+    String? imageUrl,
+    bool? isRecommended,
+    String? categoryId,
+    List<MenuVariant>? variants,
+    int? stock,
+    bool? isActive,
+  }) {
+    return MenuItem(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      imageUrl: imageUrl ?? this.imageUrl,
+      isRecommended: isRecommended ?? this.isRecommended,
+      categoryId: categoryId ?? this.categoryId,
+      variants: variants ?? this.variants,
+      stock: stock ?? this.stock,
+      isActive: isActive ?? this.isActive,
+    );
+  }
 
   @override
   List<Object?> get props => [
@@ -63,5 +93,7 @@ class MenuItem extends Equatable {
         isRecommended,
         categoryId,
         variants,
+        stock,
+        isActive,
       ];
 }

@@ -22,6 +22,8 @@ class OrderEntity extends Equatable {
   final List<CartItem> items;
   final double total;
   final DateTime createdAt;
+  final String paymentMethod;
+  final String status;
 
   const OrderEntity({
     required this.id,
@@ -29,8 +31,38 @@ class OrderEntity extends Equatable {
     required this.items,
     required this.total,
     required this.createdAt,
+    this.paymentMethod = 'QRIS',
+    this.status = 'Success',
   });
 
+  OrderEntity copyWith({
+    String? id,
+    CustomerInfo? customer,
+    List<CartItem>? items,
+    double? total,
+    DateTime? createdAt,
+    String? paymentMethod,
+    String? status,
+  }) {
+    return OrderEntity(
+      id: id ?? this.id,
+      customer: customer ?? this.customer,
+      items: items ?? this.items,
+      total: total ?? this.total,
+      createdAt: createdAt ?? this.createdAt,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      status: status ?? this.status,
+    );
+  }
+
   @override
-  List<Object?> get props => [id, customer, items, total, createdAt];
+  List<Object?> get props => [
+        id,
+        customer,
+        items,
+        total,
+        createdAt,
+        paymentMethod,
+        status,
+      ];
 }

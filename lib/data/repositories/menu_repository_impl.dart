@@ -14,8 +14,16 @@ class MenuRepositoryImpl implements MenuRepository {
   }
 
   @override
-  Future<List<MenuItem>> getMenuItems({String? categoryId, String? searchQuery}) {
-    return localDataSource.getMenuItems(categoryId: categoryId, searchQuery: searchQuery);
+  Future<List<MenuItem>> getMenuItems({
+    String? categoryId,
+    String? searchQuery,
+    bool includeInactive = false,
+  }) {
+    return localDataSource.getMenuItems(
+      categoryId: categoryId,
+      searchQuery: searchQuery,
+      includeInactive: includeInactive,
+    );
   }
 
   @override
@@ -26,5 +34,25 @@ class MenuRepositoryImpl implements MenuRepository {
   @override
   Future<List<MenuItem>> getRecommendedItems() {
     return localDataSource.getRecommendedItems();
+  }
+
+  @override
+  Future<void> addMenuItem(MenuItem item) {
+    return localDataSource.addMenuItem(item);
+  }
+
+  @override
+  Future<void> updateMenuItem(MenuItem item) {
+    return localDataSource.updateMenuItem(item);
+  }
+
+  @override
+  Future<void> deleteMenuItem(String id) {
+    return localDataSource.deleteMenuItem(id);
+  }
+
+  @override
+  Future<void> addCategory(MenuCategory category) {
+    return localDataSource.addCategory(category);
   }
 }
