@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/di/injection_container.dart' as di;
+import '../../../domain/entities/menu_category.dart';
+import '../../../domain/entities/menu_item.dart';
+import '../../../domain/entities/expense.dart';
+import '../../../domain/repositories/menu_repository.dart';
+import '../../../domain/repositories/expense_repository.dart';
 import '../auth/cubit/admin_auth_cubit.dart';
 import '../auth/cubit/admin_auth_state.dart';
 import '../auth/ui/admin_login_page.dart';
@@ -358,6 +364,30 @@ class _AdminHeader extends StatelessWidget {
                     },
                     activeColor: AppColors.primary,
                     contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(dialogCtx);
+                        _seedFirestoreData(context);
+                      },
+                      icon: const Icon(Icons.cloud_upload_outlined, size: 16),
+                      label: const Text(
+                        'Seed Initial Data to Firestore',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -723,6 +753,30 @@ class _SidebarContent extends StatelessWidget {
                     activeColor: AppColors.primary,
                     contentPadding: EdgeInsets.zero,
                   ),
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(dialogCtx);
+                        _seedFirestoreData(context);
+                      },
+                      icon: const Icon(Icons.cloud_upload_outlined, size: 16),
+                      label: const Text(
+                        'Seed Initial Data to Firestore',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -764,5 +818,158 @@ class _SidebarContent extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _seedFirestoreData(BuildContext context) async {
+  try {
+    final menuRepo = di.sl<MenuRepository>();
+    final expenseRepo = di.sl<ExpenseRepository>();
+
+    // 1. Seed Categories
+    final categories = [
+      const MenuCategory(id: 'cat_rice', name: 'Rice'),
+      const MenuCategory(id: 'cat_noodles', name: 'Noodles'),
+      const MenuCategory(id: 'cat_chicken', name: 'Chicken'),
+      const MenuCategory(id: 'cat_snack', name: 'Snack'),
+      const MenuCategory(id: 'cat_drink', name: 'Drink'),
+      const MenuCategory(id: 'cat_dessert', name: 'Dessert'),
+    ];
+    for (final cat in categories) {
+      await menuRepo.addCategory(cat);
+    }
+
+    // 2. Seed Menu Items
+    final items = [
+      const MenuItem(
+        id: 'item_katsu',
+        name: 'Chicken Katsu',
+        description: 'Crispy chicken breast with savory tonkatsu sauce, cabbage salad and warm rice.',
+        price: 35000,
+        imageUrl: 'https://images.unsplash.com/photo-1598515214211-89d3e73ae83b?q=80&w=600',
+        isRecommended: true,
+        categoryId: 'cat_chicken',
+        variants: [
+          MenuVariant(
+            id: 'v_katsu_flavor',
+            name: 'Flavor',
+            isRequired: true,
+            options: [
+              VariantOption(id: 'opt_katsu_orig', name: 'Original Sauce'),
+              VariantOption(id: 'opt_katsu_spicy', name: 'Spicy Fire Sauce', additionalPrice: 3000),
+              VariantOption(id: 'opt_katsu_cheese', name: 'Cheese Dip Sauce', additionalPrice: 5000),
+            ],
+          ),
+        ],
+      ),
+      const MenuItem(
+        id: 'item_teriyaki',
+        name: 'Beef Teriyaki Rice Bowl',
+        description: 'Stir-fried sliced beef with sweet teriyaki sauce, onions, and sesame seeds over rice.',
+        price: 42000,
+        imageUrl: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?q=80&w=600',
+        isRecommended: true,
+        categoryId: 'cat_rice',
+        variants: [
+          MenuVariant(
+            id: 'v_teriyaki_size',
+            name: 'Size',
+            isRequired: true,
+            options: [
+              VariantOption(id: 'opt_teriyaki_reg', name: 'Regular'),
+              VariantOption(id: 'opt_teriyaki_large', name: 'Jumbo Beef Portion', additionalPrice: 12000),
+            ],
+          ),
+        ],
+      ),
+      const MenuItem(
+        id: 'item_spicy_ramen',
+        name: 'Spicy Miso Ramen',
+        description: 'Noodles in spicy rich miso broth topped with egg, chashu chicken, corn and green onions.',
+        price: 38000,
+        imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?q=80&w=600',
+        isRecommended: true,
+        categoryId: 'cat_noodles',
+        variants: [
+          MenuVariant(
+            id: 'v_ramen_spicy',
+            name: 'Spicy Level',
+            isRequired: true,
+            options: [
+              VariantOption(id: 'opt_ramen_lvl1', name: 'Level 1 - Mild'),
+              VariantOption(id: 'opt_ramen_lvl3', name: 'Level 3 - Medium Spicy', additionalPrice: 2000),
+              VariantOption(id: 'opt_ramen_lvl5', name: 'Level 5 - Extreme Spicy', additionalPrice: 4000),
+            ],
+          ),
+        ],
+      ),
+      const MenuItem(
+        id: 'item_iced_tea',
+        name: 'Iced Sweet Jasmine Tea',
+        description: 'Refreshing brewed jasmine green tea served chilled with pure sugar syrup.',
+        price: 8000,
+        imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=600',
+        isRecommended: false,
+        categoryId: 'cat_drink',
+        variants: [
+          MenuVariant(
+            id: 'v_tea_size',
+            name: 'Size',
+            isRequired: false,
+            options: [
+              VariantOption(id: 'opt_tea_reg', name: 'Regular Size'),
+              VariantOption(id: 'opt_tea_jumbo', name: 'Jumbo Size', additionalPrice: 3000),
+            ],
+          ),
+        ],
+      ),
+    ];
+    for (final item in items) {
+      await menuRepo.addMenuItem(item);
+    }
+
+    // 3. Seed Expenses
+    final now = DateTime.now();
+    final expenses = [
+      Expense(
+        id: 'EXP_001',
+        date: now.subtract(const Duration(days: 10)),
+        category: 'Internet',
+        description: 'Monthly Fiber Internet Bill',
+        amount: 350000,
+        notes: 'Paid via auto-debit',
+        createdBy: 'Super Admin',
+      ),
+      Expense(
+        id: 'EXP_002',
+        date: now.subtract(const Duration(days: 5)),
+        category: 'Raw Materials',
+        description: 'Purchase meat & chicken stock',
+        amount: 1500000,
+        notes: 'Supplier: Jaya Meat',
+        createdBy: 'Super Admin',
+      ),
+    ];
+    for (final exp in expenses) {
+      await expenseRepo.addExpense(exp);
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Firestore Database seeded successfully! Please refresh pages.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to seed database: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 }

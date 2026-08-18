@@ -6,6 +6,11 @@ import '../../data/datasources/menu_local_datasource.dart';
 import '../../data/datasources/order_local_datasource.dart';
 import '../../data/datasources/expense_local_datasource.dart';
 import '../../data/datasources/admin_auth_local_datasource.dart';
+import '../../data/datasources/menu_firestore_datasource.dart';
+import '../../data/datasources/order_firestore_datasource.dart';
+import '../../data/datasources/expense_firestore_datasource.dart';
+import '../../data/datasources/admin_auth_firestore_datasource.dart';
+import '../config/firebase_config.dart';
 
 // Repositories
 import '../../data/repositories/cart_repository_impl.dart';
@@ -111,19 +116,37 @@ Future<void> init() async {
   );
 
   // ----------------- Data: Sources -----------------
-  sl.registerLazySingleton<MenuLocalDataSource>(
-    () => MenuLocalDataSourceImpl(),
-  );
-  sl.registerLazySingleton<CartLocalDataSource>(
-    () => CartLocalDataSourceImpl(),
-  );
-  sl.registerLazySingleton<OrderLocalDataSource>(
-    () => OrderLocalDataSourceImpl(menuLocalDataSource: sl()),
-  );
-  sl.registerLazySingleton<ExpenseLocalDataSource>(
-    () => ExpenseLocalDataSourceImpl(),
-  );
-  sl.registerLazySingleton<AdminAuthLocalDataSource>(
-    () => AdminAuthLocalDataSourceImpl(),
-  );
+  if (FirebaseConfig.useFirebase) {
+    sl.registerLazySingleton<MenuLocalDataSource>(
+      () => MenuFirestoreDataSourceImpl(),
+    );
+    sl.registerLazySingleton<CartLocalDataSource>(
+      () => CartLocalDataSourceImpl(),
+    );
+    sl.registerLazySingleton<OrderLocalDataSource>(
+      () => OrderFirestoreDataSourceImpl(),
+    );
+    sl.registerLazySingleton<ExpenseLocalDataSource>(
+      () => ExpenseFirestoreDataSourceImpl(),
+    );
+    sl.registerLazySingleton<AdminAuthLocalDataSource>(
+      () => AdminAuthFirestoreDataSourceImpl(),
+    );
+  } else {
+    sl.registerLazySingleton<MenuLocalDataSource>(
+      () => MenuLocalDataSourceImpl(),
+    );
+    sl.registerLazySingleton<CartLocalDataSource>(
+      () => CartLocalDataSourceImpl(),
+    );
+    sl.registerLazySingleton<OrderLocalDataSource>(
+      () => OrderLocalDataSourceImpl(menuLocalDataSource: sl()),
+    );
+    sl.registerLazySingleton<ExpenseLocalDataSource>(
+      () => ExpenseLocalDataSourceImpl(),
+    );
+    sl.registerLazySingleton<AdminAuthLocalDataSource>(
+      () => AdminAuthLocalDataSourceImpl(),
+    );
+  }
 }

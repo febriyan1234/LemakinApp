@@ -3,6 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'core/config/firebase_config.dart';
+import 'firebase_options.dart';
 import 'core/di/injection_container.dart' as di;
 import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
@@ -15,6 +18,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
   GoRouter.optionURLReflectsImperativeAPIs = true;
+  if (FirebaseConfig.useFirebase) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
   await di.init();
   await initializeDateFormatting('id', null);
   runApp(const MyApp());
