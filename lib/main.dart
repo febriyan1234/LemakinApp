@@ -31,14 +31,18 @@ void main() async {
   await initializeDateFormatting('id', null);
 
   // Fetch settings document from Firestore BEFORE calling runApp!
-  String initialRestaurantName = 'Lemakin Restaurant';
   try {
     if (FirebaseConfig.useFirebase) {
       final doc = await FirebaseFirestore.instance.collection('settings').doc('store').get();
       if (doc.exists) {
         final sData = doc.data();
-        if (sData != null && sData['restaurantName'] != null) {
-          initialRestaurantName = sData['restaurantName'] as String;
+        if (sData != null) {
+          if (sData['restaurantName'] != null) {
+            StoreStatusHelper.initialRestaurantName = sData['restaurantName'] as String;
+          }
+          if (sData['logoUrl'] != null) {
+            StoreStatusHelper.initialLogoUrl = sData['logoUrl'] as String;
+          }
         }
       }
     }
@@ -46,7 +50,7 @@ void main() async {
     // Fallback if network/permission fails
   }
 
-  runApp(MyApp(initialRestaurantName: initialRestaurantName));
+  runApp(const MyApp());
 }
 
 class LemakinScrollBehavior extends MaterialScrollBehavior {
@@ -60,11 +64,7 @@ class LemakinScrollBehavior extends MaterialScrollBehavior {
 }
 
 class MyApp extends StatelessWidget {
-  final String initialRestaurantName;
-  const MyApp({
-    super.key,
-    this.initialRestaurantName = 'Lemakin Restaurant',
-  });
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -77,10 +77,10 @@ class MyApp extends StatelessWidget {
       child: StreamBuilder<DocumentSnapshot>(
         stream: StoreStatusHelper.stream,
         builder: (context, snapshot) {
-          String restaurantName = initialRestaurantName;
+          String restaurantName = StoreStatusHelper.initialRestaurantName;
           if (snapshot.hasData && snapshot.data!.exists) {
             final sData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
-            restaurantName = sData['restaurantName'] as String? ?? initialRestaurantName;
+            restaurantName = sData['restaurantName'] as String? ?? StoreStatusHelper.initialRestaurantName;
           }
 
           return Title(

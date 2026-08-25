@@ -116,8 +116,8 @@ class _MenuPageState extends State<MenuPage> {
                               child: StreamBuilder<DocumentSnapshot>(
                                 stream: StoreStatusHelper.stream,
                                 builder: (context, storeSnapshot) {
-                                  String restaurantName = 'Lemakin Restaurant';
-                                  String? logoUrl;
+                                  String restaurantName = StoreStatusHelper.initialRestaurantName;
+                                  String? logoUrl = StoreStatusHelper.initialLogoUrl;
                                   bool isShopOpen = true;
                                   bool isClosedTemporarily = false;
                                   DateTime? closedUntil;
@@ -125,8 +125,8 @@ class _MenuPageState extends State<MenuPage> {
                                   if (storeSnapshot.hasData && storeSnapshot.data!.exists) {
                                     final sData = storeSnapshot.data!.data() as Map<String, dynamic>?;
                                     if (sData != null) {
-                                      restaurantName = sData['restaurantName'] as String? ?? 'Lemakin Restaurant';
-                                      logoUrl = sData['logoUrl'] as String?;
+                                      restaurantName = sData['restaurantName'] as String? ?? StoreStatusHelper.initialRestaurantName;
+                                      logoUrl = sData['logoUrl'] as String? ?? StoreStatusHelper.initialLogoUrl;
                                       isShopOpen = sData['isShopOpen'] as bool? ?? true;
                                       isClosedTemporarily = sData['isClosedTemporarily'] as bool? ?? false;
                                       if (sData['closedUntil'] != null) {
@@ -202,7 +202,7 @@ class _MenuPageState extends State<MenuPage> {
                                                   child: Container(
                                                     color: Colors.white,
                                                     padding: const EdgeInsets.all(4.0),
-                                                    child: logoUrl != null && logoUrl.isNotEmpty
+                                                    child: logoUrl.isNotEmpty
                                                         ? Image.network(
                                                             logoUrl,
                                                             fit: BoxFit.contain,
