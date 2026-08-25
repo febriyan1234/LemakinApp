@@ -13,16 +13,23 @@ class AdminAuthLocalDataSourceImpl implements AdminAuthLocalDataSource {
   @override
   Future<String?> login(String emailOrUsername, String password) async {
     await Future.delayed(const Duration(milliseconds: 600));
-    final cleanEmail = emailOrUsername.trim().toLowerCase();
-    
-    if ((cleanEmail == 'admin' && password == 'admin123') ||
-        (cleanEmail == 'admin@lemakin.com' && password == 'password123')) {
-      _token = 'mock_jwt_token_for_admin_session_${DateTime.now().millisecondsSinceEpoch}';
-      _adminName = 'Super Admin';
-      return _token;
-    } else {
-      throw Exception('Invalid email/username or password');
+    final cleanUsername = emailOrUsername.trim();
+    final cleanPassword = password.trim();
+
+    if (cleanUsername.isEmpty || cleanPassword.isEmpty) {
+      throw Exception('Username and password cannot be empty');
     }
+
+    _token = 'mock_jwt_token_for_admin_session_${DateTime.now().millisecondsSinceEpoch}';
+    
+    // Parse name from email username or use cleanUsername directly
+    final parts = cleanUsername.split('@');
+    final rawName = parts[0].replaceAll(RegExp(r'[^a-zA-Z0-9]'), ' ').trim();
+    _adminName = rawName.isNotEmpty
+        ? rawName.split(' ').map((s) => s.isNotEmpty ? '${s[0].toUpperCase()}${s.substring(1)}' : '').join(' ')
+        : 'Admin';
+
+    return _token;
   }
 
   @override

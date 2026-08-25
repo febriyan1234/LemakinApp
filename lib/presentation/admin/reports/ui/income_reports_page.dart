@@ -3,12 +3,14 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:excel/excel.dart' as exc;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../../core/widgets/gradient_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/file_download_helper.dart'
@@ -357,7 +359,7 @@ class _IncomeReportsPageState extends State<IncomeReportsPage> {
               : <OrderEntity>[];
 
           return RefreshIndicator(
-            onRefresh: () => _cubit.fetchReports(),
+            onRefresh: () => _cubit.refreshReports(),
             color: AppColors.primary,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -651,34 +653,34 @@ class _IncomeReportsPageState extends State<IncomeReportsPage> {
         ),
         Row(
           children: [
-            OutlinedButton(
+            GradientButton(
               onPressed: _currentPage > 1
                   ? () => setState(() {
                       _currentPage--;
                     })
                   : null,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+              borderRadius: 12,
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: const Text(
+                'Previous',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
-              child: const Text('Previous', style: TextStyle(fontSize: 12)),
             ),
             const SizedBox(width: 10),
-            OutlinedButton(
+            GradientButton(
               onPressed: _currentPage < totalPages
                   ? () => setState(() {
                       _currentPage++;
                     })
                   : null,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+              borderRadius: 12,
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: const Text(
+                'Next',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
-              child: const Text('Next', style: TextStyle(fontSize: 12)),
             ),
           ],
         ),
@@ -713,128 +715,131 @@ class _IncomeReportsPageState extends State<IncomeReportsPage> {
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final order = orders[index];
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[100]!),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.01),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      order.id,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: AppColors.textDark,
+          return InkWell(
+            onTap: () => _showOrderDetailDialog(context, order),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[100]!),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.01),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        order.id,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: AppColors.textDark,
+                        ),
                       ),
-                    ),
-                    _buildStatusBadge(order.status),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _formatIndoDate(order.createdAt),
-                      style: const TextStyle(
-                        fontSize: 12,
+                      _buildStatusBadge(order.status),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.access_time,
+                        size: 14,
                         color: AppColors.textSecondary,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.person_outline,
-                      size: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        '${order.customer.name} • ${order.customer.address}',
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatIndoDate(order.createdAt),
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-                const Divider(
-                  height: 24,
-                  thickness: 0.5,
-                  color: AppColors.grey300,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${order.customer.name} • ${order.customer.address}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.grey[200]!),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(
+                    height: 24,
+                    thickness: 0.5,
+                    color: AppColors.grey300,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.grey[200]!),
+                            ),
+                            child: Text(
+                              order.paymentMethod,
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary),
+                            ),
                           ),
-                          child: Text(
-                            order.paymentMethod,
+                          const SizedBox(width: 8),
+                          Text(
+                            '${order.items.fold(0, (sum, item) => sum + item.quantity)} pcs',
                             style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
                               color: AppColors.textSecondary,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${order.items.fold(0, (sum, item) => sum + item.quantity)} pcs',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      CurrencyFormatter.format(order.total),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppColors.primary,
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      Text(
+                        CurrencyFormatter.format(order.total),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -887,6 +892,7 @@ class _IncomeReportsPageState extends State<IncomeReportsPage> {
           ),
         ],
         rows: orders.map((order) {
+          void tapHandler() => _showOrderDetailDialog(context, order);
           return DataRow(
             cells: [
               DataCell(
@@ -897,8 +903,12 @@ class _IncomeReportsPageState extends State<IncomeReportsPage> {
                     color: AppColors.textDark,
                   ),
                 ),
+                onTap: tapHandler,
               ),
-              DataCell(Text(_formatIndoDate(order.createdAt))),
+              DataCell(
+                Text(_formatIndoDate(order.createdAt)),
+                onTap: tapHandler,
+              ),
               DataCell(
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -917,9 +927,16 @@ class _IncomeReportsPageState extends State<IncomeReportsPage> {
                     ),
                   ],
                 ),
+                onTap: tapHandler,
               ),
-              DataCell(Text(order.paymentMethod)),
-              DataCell(_buildStatusBadge(order.status)),
+              DataCell(
+                Text(order.paymentMethod),
+                onTap: tapHandler,
+              ),
+              DataCell(
+                _buildStatusBadge(order.status),
+                onTap: tapHandler,
+              ),
               DataCell(
                 Text(
                   CurrencyFormatter.format(order.total),
@@ -928,16 +945,383 @@ class _IncomeReportsPageState extends State<IncomeReportsPage> {
                     color: AppColors.primary,
                   ),
                 ),
+                onTap: tapHandler,
               ),
               DataCell(
                 Text(
                   '${order.items.fold(0, (sum, item) => sum + item.quantity)} pcs',
                 ),
+                onTap: tapHandler,
               ),
             ],
           );
         }).toList(),
       ),
+    );
+  }
+
+  void _showOrderDetailDialog(BuildContext context, OrderEntity order) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.receipt_long, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Transaction Detail',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                onPressed: () => Navigator.pop(dialogCtx),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 500,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Meta Info Row
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildMetaRow('Transaction ID', order.id),
+                        const SizedBox(height: 6),
+                        _buildMetaRow('Date & Time', _formatIndoDate(order.createdAt)),
+                        const SizedBox(height: 6),
+                        _buildMetaRow('Payment Method', order.paymentMethod),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Status',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            _buildStatusBadge(order.status),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Customer Section
+                  const Text(
+                    'Customer Info',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    order.customer.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  if (order.customer.phone.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Phone: ${order.customer.phone}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 2),
+                  Text(
+                    'Address: ${order.customer.address}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(color: AppColors.border),
+                  const SizedBox(height: 12),
+
+                  // Ordered Items
+                  const Text(
+                    'Ordered Menu',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: order.items.length,
+                    separatorBuilder: (context, index) => const Divider(
+                      height: 20,
+                      color: AppColors.border,
+                    ),
+                    itemBuilder: (context, index) {
+                      final item = order.items[index];
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Item Image Thumbnail
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              item.menuItem.imageUrl,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 50,
+                                height: 50,
+                                color: Colors.grey[100],
+                                child: const Icon(
+                                  Icons.fastfood,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.menuItem.name,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                if (item.selectedVariants.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Builder(
+                                    builder: (context) {
+                                      final Map<String, List<String>> grouped = {};
+                                      item.selectedVariants.forEach((key, opt) {
+                                        final name = key.contains(':') ? key.split(':').first : key;
+                                        grouped.putIfAbsent(name, () => []).add(opt.name);
+                                      });
+                                      final text = grouped.entries
+                                          .map((e) => '${e.key}: ${e.value.join(", ")}')
+                                          .join(' | ');
+                                      return Text(
+                                        text,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                                if (item.notes != null && item.notes!.trim().isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber[50],
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: Colors.amber[100]!),
+                                    ),
+                                    child: Text(
+                                      'Note: "${item.notes}"',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.amber[900],
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${item.quantity} x ${CurrencyFormatter.format(item.unitPrice)}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            CurrencyFormatter.format(item.subtotal),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(color: AppColors.border),
+                  const SizedBox(height: 12),
+
+                  // Total Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Total Payment',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(order.total),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (confirmCtx) {
+                            return AlertDialog(
+                              title: const Text('Delete Order'),
+                              content: Text('Are you sure you want to delete order ${order.id}?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(confirmCtx),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(confirmCtx);
+                                    Navigator.pop(dialogCtx);
+                                    context.read<AdminReportsCubit>().deleteOrder(order.id);
+                                  },
+                                  child: const Text('Delete', style: TextStyle(color: Color(0xFFE53935))),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFEBEE),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: Color(0xFFE53935),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(dialogCtx);
+                        context.push('/admin/reports/income/edit', extra: order);
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE8F5E9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          size: 18,
+                          color: Color(0xFF4CAF50),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('Close', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMetaRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textDark,
+          ),
+        ),
+      ],
     );
   }
 }

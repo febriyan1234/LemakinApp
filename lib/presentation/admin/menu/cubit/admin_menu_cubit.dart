@@ -17,15 +17,17 @@ class AdminMenuCubit extends Cubit<AdminMenuState> {
     try {
       final categories = await menuRepository.getCategories();
       final items = await menuRepository.getMenuItems(includeInactive: true);
+      final variants = await adminMenuUseCase.getVariants();
 
       emit(
         AdminMenuLoaded(
           menuItems: items,
           categories: categories,
+          variants: variants,
           selectedCategoryId: 'All',
           selectedStatus: 'All',
           searchQuery: '',
-          sortBy: 'Name',
+          sortBy: 'Custom',
         ),
       );
     } catch (e) {
@@ -33,14 +35,18 @@ class AdminMenuCubit extends Cubit<AdminMenuState> {
     }
   }
 
-  void refreshMenus({String? successMsg, String? errorMsg}) async {
+  Future<void> refreshMenus({String? successMsg, String? errorMsg}) async {
     final currentState = state;
     if (currentState is AdminMenuLoaded) {
       try {
         final items = await menuRepository.getMenuItems(includeInactive: true);
+        final categories = await menuRepository.getCategories();
+        final variants = await adminMenuUseCase.getVariants();
         emit(
           currentState.copyWith(
             menuItems: items,
+            categories: categories,
+            variants: variants,
             actionSuccessMessage: () => successMsg,
             actionErrorMessage: () => errorMsg,
           ),
@@ -100,7 +106,9 @@ class AdminMenuCubit extends Cubit<AdminMenuState> {
 
     // Sorting
     final list = items.toList();
-    if (loadedState.sortBy == 'Name') {
+    if (loadedState.sortBy == 'Custom') {
+      list.sort((a, b) => (a.orderIndex).compareTo(b.orderIndex));
+    } else if (loadedState.sortBy == 'Name') {
       list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     } else if (loadedState.sortBy == 'Price Asc') {
       list.sort((a, b) => a.price.compareTo(b.price));
@@ -201,14 +209,108 @@ class AdminMenuCubit extends Cubit<AdminMenuState> {
 
   Future<void> addCategory(String name) async {
     try {
+      final currentState = state;
+      int orderIndex = 0;
+      if (currentState is AdminMenuLoaded) {
+        orderIndex = currentState.categories.length;
+      }
       final category = MenuCategory(
         id: 'cat_${DateTime.now().millisecondsSinceEpoch}',
         name: name,
+        orderIndex: orderIndex,
       );
       await adminMenuUseCase.addCategory(category);
       fetchMenus();
     } catch (e) {
       emit(AdminMenuError(e.toString()));
+    }
+  }
+
+  Future<void> editCategory(String id, String newName) async {
+    try {
+      final currentState = state;
+      int existingOrderIndex = 0;
+      if (currentState is AdminMenuLoaded) {
+        try {
+          final existingCat = currentState.categories.firstWhere((cat) => cat.id == id);
+          existingOrderIndex = existingCat.orderIndex;
+        } catch (_) {}
+      }
+      final category = MenuCategory(id: id, name: newName, orderIndex: existingOrderIndex);
+      await adminMenuUseCase.updateCategory(category);
+      fetchMenus();
+    } catch (e) {
+      emit(AdminMenuError(e.toString()));
+    }
+  }
+
+  Future<void> deleteCategory(String id) async {
+    try {
+      await adminMenuUseCase.deleteCategory(id);
+      fetchMenus();
+    } catch (e) {
+      emit(AdminMenuError(e.toString()));
+    }
+  }
+
+  Future<void> addVariant(MenuVariant variant) async {
+    try {
+      await adminMenuUseCase.addVariant(variant);
+      fetchMenus();
+    } catch (e) {
+      emit(AdminMenuError(e.toString()));
+    }
+  }
+
+  Future<void> editVariant(MenuVariant variant) async {
+    try {
+      await adminMenuUseCase.updateVariant(variant);
+      fetchMenus();
+    } catch (e) {
+      emit(AdminMenuError(e.toString()));
+    }
+  }
+
+  Future<void> deleteVariant(String id) async {
+    try {
+      await adminMenuUseCase.deleteVariant(id);
+      fetchMenus();
+    } catch (e) {
+      emit(AdminMenuError(e.toString()));
+    }
+  }
+
+  Future<void> reorderCategories(List<MenuCategory> reorderedCategories) async {
+    final currentState = state;
+    if (currentState is AdminMenuLoaded) {
+      emit(currentState.copyWith(categories: reorderedCategories));
+    }
+    try {
+      for (int i = 0; i < reorderedCategories.length; i++) {
+        final updatedCat = reorderedCategories[i].copyWith(orderIndex: i);
+        await adminMenuUseCase.updateCategory(updatedCat);
+      }
+      refreshMenus();
+    } catch (e) {
+      emit(AdminMenuError(e.toString()));
+      fetchMenus();
+    }
+  }
+
+  Future<void> reorderMenuItems(List<MenuItem> reorderedItems) async {
+    final currentState = state;
+    if (currentState is AdminMenuLoaded) {
+      emit(currentState.copyWith(menuItems: reorderedItems));
+    }
+    try {
+      for (int i = 0; i < reorderedItems.length; i++) {
+        final updatedItem = reorderedItems[i].copyWith(orderIndex: i);
+        await adminMenuUseCase.updateMenuItem(updatedItem);
+      }
+      refreshMenus();
+    } catch (e) {
+      emit(AdminMenuError(e.toString()));
+      fetchMenus();
     }
   }
 }

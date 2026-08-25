@@ -103,6 +103,7 @@ class OrderFirestoreDataSourceImpl implements OrderLocalDataSource {
       'createdAt': Timestamp.fromDate(order.createdAt),
       'paymentMethod': order.paymentMethod,
       'status': order.status,
+      'scheduledAt': order.scheduledAt != null ? Timestamp.fromDate(order.scheduledAt!) : null,
     };
   }
 
@@ -122,6 +123,14 @@ class OrderFirestoreDataSourceImpl implements OrderLocalDataSource {
       createdAt = DateTime.now();
     }
 
+    final dateScheduledRaw = map['scheduledAt'];
+    DateTime? scheduledAt;
+    if (dateScheduledRaw is Timestamp) {
+      scheduledAt = dateScheduledRaw.toDate();
+    } else if (dateScheduledRaw is String) {
+      scheduledAt = DateTime.parse(dateScheduledRaw);
+    }
+
     return OrderEntity(
       id: map['id'] as String? ?? '',
       customer: _customerInfoFromMap(
@@ -131,6 +140,23 @@ class OrderFirestoreDataSourceImpl implements OrderLocalDataSource {
       createdAt: createdAt,
       paymentMethod: map['paymentMethod'] as String? ?? 'QRIS',
       status: map['status'] as String? ?? 'Success',
+      scheduledAt: scheduledAt,
     );
+  }
+
+  @override
+  Future<void> updateOrder(OrderEntity order) async {
+    await _firestore
+        .collection('orders')
+        .doc(order.id)
+        .update(_orderToMap(order));
+  }
+
+  @override
+  Future<void> deleteOrder(String id) async {
+    await _firestore
+        .collection('orders')
+        .doc(id)
+        .delete();
   }
 }

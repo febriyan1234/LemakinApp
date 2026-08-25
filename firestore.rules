@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Siapa saja bisa membaca kategori, menu makanan, & varian
+    match /menu_categories/{category} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /menu_items/{item} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /menu_variants/{variant} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    // Siapa saja bisa membuat pesanan (checkout), admin bisa mengelola
+    match /orders/{order} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+    // Data pengeluaran hanya untuk admin yang login
+    match /expenses/{expense} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

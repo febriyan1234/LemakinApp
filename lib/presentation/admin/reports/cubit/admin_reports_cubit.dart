@@ -49,7 +49,12 @@ class AdminReportsCubit extends Cubit<AdminReportsState> {
     if (currentState is AdminReportsLoaded) {
       try {
         final orders = await orderRepository.getOrders();
-        final expenses = await expenseRepository.getExpenses();
+        final expenses = await expenseRepository.getExpenses(
+          category: currentState.selectedExpenseCategory,
+          searchQuery: currentState.expenseSearchQuery,
+          startDate: currentState.expenseStartDate,
+          endDate: currentState.expenseEndDate,
+        );
 
         // Sort descending
         orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -66,7 +71,7 @@ class AdminReportsCubit extends Cubit<AdminReportsState> {
         emit(AdminReportsError(e.toString()));
       }
     } else {
-      fetchReports();
+      await fetchReports();
     }
   }
 
@@ -206,6 +211,24 @@ class AdminReportsCubit extends Cubit<AdminReportsState> {
       refreshReports(successMsg: 'Expense deleted successfully');
     } catch (e) {
       refreshReports(errorMsg: 'Failed to delete expense: ${e.toString()}');
+    }
+  }
+
+  Future<void> updateOrder(OrderEntity order) async {
+    try {
+      await orderRepository.updateOrder(order);
+      await refreshReports(successMsg: 'Order ${order.id} updated successfully');
+    } catch (e) {
+      await refreshReports(errorMsg: 'Failed to update order: ${e.toString()}');
+    }
+  }
+
+  Future<void> deleteOrder(String id) async {
+    try {
+      await orderRepository.deleteOrder(id);
+      await refreshReports(successMsg: 'Order $id deleted successfully');
+    } catch (e) {
+      await refreshReports(errorMsg: 'Failed to delete order: ${e.toString()}');
     }
   }
 

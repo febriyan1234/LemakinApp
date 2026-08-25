@@ -32,11 +32,11 @@ class VariantSelector extends StatelessWidget {
                   color: AppColors.textDark,
                 ),
               ),
-              if (variant.isRequired) ...[
+              if (variant.isRequired || variant.minSelections > 0) ...[
                 const SizedBox(width: 6),
-                const Text(
-                  '* Required',
-                  style: TextStyle(
+                Text(
+                  '* Required (Min: ${variant.minSelections})',
+                  style: const TextStyle(
                     color: AppColors.error,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -51,20 +51,38 @@ class VariantSelector extends StatelessWidget {
                     fontSize: 11,
                   ),
                 ),
-                if (selectedOption != null) ...[
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => onOptionSelected(null),
-                    child: const Text(
-                      'Clear Selection',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+              ],
+              if (variant.maxSelections > 1) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Max: ${variant.maxSelections}',
+                    style: TextStyle(
+                      color: Colors.blue[700],
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
+                ),
+              ],
+              if (!variant.isRequired && variant.minSelections == 0 && selectedOption != null) ...[
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => onOptionSelected(null),
+                  child: const Text(
+                    'Clear Selection',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ],
           ),

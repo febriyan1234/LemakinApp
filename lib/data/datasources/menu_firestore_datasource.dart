@@ -12,7 +12,9 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
   @override
   Future<List<MenuCategory>> getCategories() async {
     final snapshot = await _firestore.collection('menu_categories').get();
-    return snapshot.docs.map((doc) => _categoryFromMap(doc.data())).toList();
+    final categories = snapshot.docs.map((doc) => _categoryFromMap(doc.data())).toList();
+    categories.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    return categories;
   }
 
   @override
@@ -23,7 +25,7 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
   }) async {
     Query query = _firestore.collection('menu_items');
 
-    if (categoryId != null && categoryId.isNotEmpty) {
+    if (categoryId != null && categoryId.isNotEmpty && categoryId != 'All') {
       query = query.where('categoryId', isEqualTo: categoryId);
     }
 
@@ -45,6 +47,7 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
           .toList();
     }
 
+    items.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
     return items;
   }
 
@@ -96,10 +99,90 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
         .set(_categoryToMap(category));
   }
 
+  @override
+  Future<void> updateCategory(MenuCategory category) async {
+    await _firestore
+        .collection('menu_categories')
+        .doc(category.id)
+        .update(_categoryToMap(category));
+  }
+
+  @override
+  Future<void> deleteCategory(String id) async {
+    await _firestore.collection('menu_categories').doc(id).delete();
+  }
+
+  @override
+  Future<List<MenuVariant>> getVariants() async {
+    final snapshot = await _firestore.collection('menu_variants').get();
+    return snapshot.docs.map((doc) => _variantFromMap(doc.data())).toList();
+  }
+
+  @override
+  Future<void> addVariant(MenuVariant variant) async {
+    await _firestore
+        .collection('menu_variants')
+        .doc(variant.id)
+        .set(_variantToMap(variant));
+  }
+
+  @override
+  Future<void> updateVariant(MenuVariant variant) async {
+    await _firestore
+        .collection('menu_variants')
+        .doc(variant.id)
+        .update(_variantToMap(variant));
+  }
+
+  @override
+  Future<void> deleteVariant(String id) async {
+    await _firestore.collection('menu_variants').doc(id).delete();
+  }
+
+  Map<String, dynamic> _variantToMap(MenuVariant variant) {
+    return {
+      'id': variant.id,
+      'name': variant.name,
+      'isRequired': variant.isRequired,
+      'minSelections': variant.minSelections,
+      'maxSelections': variant.maxSelections,
+      'options': variant.options
+          .map((o) => {
+                'id': o.id,
+                'name': o.name,
+                'additionalPrice': o.additionalPrice,
+              })
+          .toList(),
+    };
+  }
+
+  MenuVariant _variantFromMap(Map<String, dynamic> map) {
+    final optionsRaw = map['options'] as List? ?? [];
+    final options = optionsRaw.map((oMapRaw) {
+      final oMap = Map<String, dynamic>.from(oMapRaw as Map);
+      return VariantOption(
+        id: oMap['id'] as String? ?? '',
+        name: oMap['name'] as String? ?? '',
+        additionalPrice: (oMap['additionalPrice'] as num?)?.toDouble() ?? 0.0,
+      );
+    }).toList();
+
+    final isRequired = map['isRequired'] as bool? ?? false;
+    return MenuVariant(
+      id: map['id'] as String? ?? '',
+      name: map['name'] as String? ?? '',
+      isRequired: isRequired,
+      minSelections: map['minSelections'] as int? ?? (isRequired ? 1 : 0),
+      maxSelections: map['maxSelections'] as int? ?? 1,
+      options: options,
+    );
+  }
+
   Map<String, dynamic> _categoryToMap(MenuCategory category) {
     return {
       'id': category.id,
       'name': category.name,
+      'orderIndex': category.orderIndex,
     };
   }
 
@@ -107,6 +190,7 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
     return MenuCategory(
       id: map['id'] as String? ?? '',
       name: map['name'] as String? ?? '',
+      orderIndex: map['orderIndex'] as int? ?? 0,
     );
   }
 
@@ -116,16 +200,20 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
       'name': item.name,
       'description': item.description,
       'price': item.price,
+      'originalPrice': item.originalPrice,
       'imageUrl': item.imageUrl,
       'isRecommended': item.isRecommended,
       'categoryId': item.categoryId,
       'stock': item.stock,
       'isActive': item.isActive,
+      'orderIndex': item.orderIndex,
       'variants': item.variants
           .map((v) => {
                 'id': v.id,
                 'name': v.name,
                 'isRequired': v.isRequired,
+                'minSelections': v.minSelections,
+                'maxSelections': v.maxSelections,
                 'options': v.options
                     .map((o) => {
                           'id': o.id,
@@ -152,10 +240,13 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
         );
       }).toList();
 
+      final isRequired = vMap['isRequired'] as bool? ?? false;
       return MenuVariant(
         id: vMap['id'] as String? ?? '',
         name: vMap['name'] as String? ?? '',
-        isRequired: vMap['isRequired'] as bool? ?? false,
+        isRequired: isRequired,
+        minSelections: vMap['minSelections'] as int? ?? (isRequired ? 1 : 0),
+        maxSelections: vMap['maxSelections'] as int? ?? 1,
         options: options,
       );
     }).toList();
@@ -165,11 +256,13 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
       name: map['name'] as String? ?? '',
       description: map['description'] as String? ?? '',
       price: (map['price'] as num?)?.toDouble() ?? 0.0,
+      originalPrice: (map['originalPrice'] as num?)?.toDouble(),
       imageUrl: map['imageUrl'] as String? ?? '',
       isRecommended: map['isRecommended'] as bool? ?? false,
       categoryId: map['categoryId'] as String? ?? '',
       stock: map['stock'] as int? ?? 50,
       isActive: map['isActive'] as bool? ?? true,
+      orderIndex: map['orderIndex'] as int? ?? 0,
       variants: variants,
     );
   }

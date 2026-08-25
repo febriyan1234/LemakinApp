@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/store_status_helper.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/widgets/shimmer_widget.dart';
 import '../../../../domain/entities/cart_item.dart';
@@ -50,7 +52,7 @@ class _MenuPageState extends State<MenuPage> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 0.68,
+                childAspectRatio: 0.72,
               ),
               itemCount: 6,
               itemBuilder: (context, index) {
@@ -84,15 +86,8 @@ class _MenuPageState extends State<MenuPage> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        appBar: AppBar(
-          title: Image.asset(
-            'assets/images/logo.png',
-            height: 38,
-            fit: BoxFit.contain,
-          ),
-          centerTitle: true,
-        ),
         body: SafeArea(
+          top: false,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
@@ -116,11 +111,160 @@ class _MenuPageState extends State<MenuPage> {
                       } else if (menuState is MenuLoaded) {
                         return CustomScrollView(
                           slivers: [
-                            // 1. Banner Carousel (scrolls away)
-                            const SliverToBoxAdapter(
-                              child: Padding(
-                                padding: EdgeInsets.only(top: 8.0),
-                                child: BannerCarousel(),
+                            // 1. Banner Carousel with overlapping logo & status (scrolls away)
+                            SliverToBoxAdapter(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Banner Carousel with overlapping logo
+                                  Stack(
+                                    clipBehavior: Clip.none,
+                                    alignment: Alignment.bottomCenter,
+                                    children: [
+                                      BannerCarousel(
+                                        items: (() {
+                                          final promoItems = menuState.menuItems
+                                              .where((item) =>
+                                                  item.originalPrice != null &&
+                                                  item.originalPrice! > item.price)
+                                              .toList();
+                                          if (promoItems.length <= 1) {
+                                            final recommended = menuState.menuItems
+                                                .where((item) => item.isRecommended)
+                                                .toList();
+                                            for (final item in recommended) {
+                                              if (!promoItems.any((promo) => promo.id == item.id)) {
+                                                promoItems.add(item);
+                                              }
+                                            }
+                                          }
+                                          if (promoItems.isEmpty) {
+                                            return menuState.menuItems.take(3).toList();
+                                          }
+                                          return promoItems;
+                                        })(),
+                                        onTap: (item) => _handleItemTap(context, item),
+                                      ),
+                                      Positioned(
+                                        bottom: -32,
+                                        child: Container(
+                                          width: 72,
+                                          height: 72,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.1),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 4),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(4.0),
+                                            child: ClipOval(
+                                              child: Container(
+                                                color: Colors.white,
+                                                padding: const EdgeInsets.all(4.0),
+                                                child: Image.asset(
+                                                  'assets/images/logo.png',
+                                                  fit: BoxFit.contain,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 44),
+                                  
+                                  // Store Name
+                                  const Text(
+                                    'Jajanan by Lemakin',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+
+                                  // Outlet Operational Status
+                                  StreamBuilder<DocumentSnapshot>(
+                                    stream: StoreStatusHelper.stream,
+                                    builder: (context, storeSnapshot) {
+                                      bool isShopOpen = true;
+                                      bool isClosedTemporarily = false;
+                                      DateTime? closedUntil;
+
+                                      if (storeSnapshot.hasData && storeSnapshot.data!.exists) {
+                                        final sData = storeSnapshot.data!.data() as Map<String, dynamic>?;
+                                        if (sData != null) {
+                                          isShopOpen = sData['isShopOpen'] as bool? ?? true;
+                                          isClosedTemporarily = sData['isClosedTemporarily'] as bool? ?? false;
+                                          if (sData['closedUntil'] != null) {
+                                            closedUntil = DateTime.tryParse(sData['closedUntil'] as String);
+                                          }
+                                        }
+                                      }
+
+                                      // Check if temp closed has expired
+                                      if (isClosedTemporarily &&
+                                          closedUntil != null &&
+                                          closedUntil.isBefore(DateTime.now())) {
+                                        isClosedTemporarily = false;
+                                        closedUntil = null;
+                                      }
+
+                                      final isCurrentlyClosed = !isShopOpen ||
+                                          (isClosedTemporarily &&
+                                              closedUntil != null &&
+                                              closedUntil.isAfter(DateTime.now()));
+
+                                      return Container(
+                                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: isCurrentlyClosed
+                                              ? AppColors.error.withValues(alpha: 0.1)
+                                              : AppColors.success.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(
+                                            color: isCurrentlyClosed
+                                                ? AppColors.error.withValues(alpha: 0.2)
+                                                : AppColors.success.withValues(alpha: 0.2),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              isCurrentlyClosed ? Icons.cancel : Icons.check_circle,
+                                              color: isCurrentlyClosed ? AppColors.error : AppColors.success,
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              isCurrentlyClosed
+                                                  ? (isClosedTemporarily && closedUntil != null
+                                                      ? 'Tutup Sementara s.d ${closedUntil.hour.toString().padLeft(2, '0')}:${closedUntil.minute.toString().padLeft(2, '0')}'
+                                                      : 'Outlet Sedang Tutup')
+                                                  : 'Outlet Buka - Menerima Pesanan',
+                                              style: TextStyle(
+                                                color: isCurrentlyClosed ? AppColors.error : AppColors.success,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
                               ),
                             ),
 
@@ -162,6 +306,21 @@ class _MenuPageState extends State<MenuPage> {
                                                   },
                                                 )
                                               : null,
+                                          filled: true,
+                                          fillColor: Colors.white,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(28),
+                                            borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(28),
+                                            borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(28),
+                                            borderSide: const BorderSide(color: AppColors.primary, width: 1),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -235,7 +394,7 @@ class _MenuPageState extends State<MenuPage> {
                                     ),
                                     const SizedBox(height: 12),
                                     SizedBox(
-                                      height: 220,
+                                      height: 235,
                                       child: ListView.builder(
                                         scrollDirection: Axis.horizontal,
                                         padding: const EdgeInsets.symmetric(
@@ -268,6 +427,12 @@ class _MenuPageState extends State<MenuPage> {
                                                       child: MenuCard(
                                                         item: item,
                                                         quantity: qty,
+                                                        onIncrement: () {
+                                                          context.read<CartCubit>().incrementCartItemQuantity(item.id);
+                                                        },
+                                                        onDecrement: () {
+                                                          context.read<CartCubit>().decrementCartItemQuantity(item.id);
+                                                        },
                                                       ),
                                                     );
                                                   },
@@ -392,7 +557,7 @@ class _MenuPageState extends State<MenuPage> {
                     crossAxisCount: 2,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    childAspectRatio: 0.68,
+                    childAspectRatio: 0.70,
                   ),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
@@ -404,7 +569,16 @@ class _MenuPageState extends State<MenuPage> {
                             .getItemQuantityInCart(item.id);
                         return GestureDetector(
                           onTap: () => _handleItemTap(context, item),
-                          child: MenuCard(item: item, quantity: qty),
+                          child: MenuCard(
+                            item: item,
+                            quantity: qty,
+                            onIncrement: () {
+                              context.read<CartCubit>().incrementCartItemQuantity(item.id);
+                            },
+                            onDecrement: () {
+                              context.read<CartCubit>().decrementCartItemQuantity(item.id);
+                            },
+                          ),
                         );
                       },
                     );
@@ -521,38 +695,114 @@ class _MenuPageState extends State<MenuPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        CurrencyFormatter.format(item.price),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      if (quantity > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'x$quantity',
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 4,
+                        children: [
+                          Text(
+                            CurrencyFormatter.format(item.price),
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          if (item.originalPrice != null && item.originalPrice! > item.price)
+                            Text(
+                              CurrencyFormatter.format(item.originalPrice!),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textLight,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (item.variants.isEmpty && quantity > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                context.read<CartCubit>().decrementCartItemQuantity(item.id);
+                              },
+                              child: Container(
+                                width: 26,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.primary, width: 1.5),
+                                ),
+                                child: const Icon(
+                                  Icons.remove,
+                                  size: 14,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$quantity',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                context.read<CartCubit>().incrementCartItemQuantity(item.id);
+                              },
+                              child: Container(
+                                width: 26,
+                                height: 26,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.add,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else if (quantity > 0)
+                        Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.primary, width: 1.5),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$quantity',
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         )
                       else
-                        const Icon(
-                          Icons.add_shopping_cart,
-                          size: 16,
-                          color: AppColors.primary,
+                        Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            size: 14,
+                            color: AppColors.primary,
+                          ),
                         ),
                     ],
                   ),
@@ -576,10 +826,25 @@ class _MenuPageState extends State<MenuPage> {
           .toList();
     }
 
-    if (matchingItems.isNotEmpty) {
-      _showCartSummaryForItemBottomSheet(context, item, matchingItems);
+    if (item.variants.isNotEmpty) {
+      if (matchingItems.isNotEmpty) {
+        _showCartSummaryForItemBottomSheet(context, item, matchingItems);
+      } else {
+        await context.push('/menu/${item.id}');
+      }
     } else {
-      await context.push('/menu/${item.id}');
+      if (matchingItems.isEmpty) {
+        await cartCubit.addToCart(
+          CartItem(
+            id: item.id,
+            menuItem: item,
+            quantity: 1,
+            selectedVariants: const {},
+          ),
+        );
+      } else {
+        await context.push('/menu/${item.id}');
+      }
     }
   }
 
@@ -744,11 +1009,19 @@ class _MenuPageState extends State<MenuPage> {
                                       size: 22,
                                     ),
                                     onPressed: () {
-                                      context
-                                          .read<CartCubit>()
-                                          .decrementCartItemQuantity(
-                                            cartItem.id,
-                                          );
+                                      final qty = cartItem.quantity;
+                                      if (qty <= 1) {
+                                        context
+                                            .read<CartCubit>()
+                                            .removeFromCart(cartItem.id);
+                                      } else {
+                                        context
+                                            .read<CartCubit>()
+                                            .updateQuantity(
+                                              cartItem.id,
+                                              qty - 1,
+                                            );
+                                      }
                                     },
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
@@ -775,8 +1048,9 @@ class _MenuPageState extends State<MenuPage> {
                                     onPressed: () {
                                       context
                                           .read<CartCubit>()
-                                          .incrementCartItemQuantity(
+                                          .updateQuantity(
                                             cartItem.id,
+                                            cartItem.quantity + 1,
                                           );
                                     },
                                     padding: EdgeInsets.zero,
@@ -789,7 +1063,34 @@ class _MenuPageState extends State<MenuPage> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const Divider(height: 32, color: AppColors.border),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total Harga',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        Text(
+                          CurrencyFormatter.format(
+                            matchingItems.fold<double>(
+                              0,
+                              (sum, cartItem) => sum + cartItem.subtotal,
+                            ),
+                          ),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
 
                     SizedBox(
                       width: double.infinity,

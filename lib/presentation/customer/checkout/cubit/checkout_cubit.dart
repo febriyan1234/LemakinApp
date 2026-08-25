@@ -16,6 +16,7 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     required String name,
     required String phone,
     required String address,
+    DateTime? scheduledAt,
   }) async {
     String? addressError;
     String? phoneError;
@@ -47,8 +48,13 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     emit(CheckoutLoading());
 
     try {
+      final now = DateTime.now();
+      final dateStr = '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year}';
+      final timeStr = '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
+      final orderId = 'ORD_$dateStr$timeStr';
+
       final order = OrderEntity(
-        id: 'ORD_${DateTime.now().millisecondsSinceEpoch}',
+        id: orderId,
         customer: CustomerInfo(
           name: name.trim().isEmpty ? 'Customer' : name.trim(),
           phone: phone.trim(),
@@ -56,7 +62,8 @@ class CheckoutCubit extends Cubit<CheckoutState> {
         ),
         items: cartState.items,
         total: cartState.totalPrice,
-        createdAt: DateTime.now(),
+        createdAt: now,
+        scheduledAt: scheduledAt,
       );
 
       await createOrderUseCase.execute(order);

@@ -24,6 +24,7 @@ class OrderEntity extends Equatable {
   final DateTime createdAt;
   final String paymentMethod;
   final String status;
+  final DateTime? scheduledAt;
 
   const OrderEntity({
     required this.id,
@@ -33,6 +34,7 @@ class OrderEntity extends Equatable {
     required this.createdAt,
     this.paymentMethod = 'QRIS',
     this.status = 'Success',
+    this.scheduledAt,
   });
 
   OrderEntity copyWith({
@@ -43,6 +45,7 @@ class OrderEntity extends Equatable {
     DateTime? createdAt,
     String? paymentMethod,
     String? status,
+    DateTime? scheduledAt,
   }) {
     return OrderEntity(
       id: id ?? this.id,
@@ -52,6 +55,7 @@ class OrderEntity extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       status: status ?? this.status,
+      scheduledAt: scheduledAt ?? this.scheduledAt,
     );
   }
 
@@ -64,5 +68,6 @@ class OrderEntity extends Equatable {
         createdAt,
         paymentMethod,
         status,
+        scheduledAt,
       ];
 }

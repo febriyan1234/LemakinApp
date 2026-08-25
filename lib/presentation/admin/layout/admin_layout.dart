@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/di/injection_container.dart' as di;
 import '../../../domain/entities/menu_category.dart';
@@ -11,12 +12,13 @@ import '../../../domain/repositories/expense_repository.dart';
 import '../auth/cubit/admin_auth_cubit.dart';
 import '../auth/cubit/admin_auth_state.dart';
 import '../auth/ui/admin_login_page.dart';
+import '../../../core/widgets/gradient_button.dart';
 
 class AdminLayout extends StatelessWidget {
-  final Widget child;
+  final StatefulNavigationShell navigationShell;
   final String title;
 
-  const AdminLayout({super.key, required this.child, required this.title});
+  const AdminLayout({super.key, required this.navigationShell, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -40,13 +42,12 @@ class AdminLayout extends StatelessWidget {
 
               final sidebarWidget = _SidebarContent(
                 isCollapsed: isTablet,
-                currentPath: GoRouterState.of(context).uri.path,
+                navigationShell: navigationShell,
                 adminName: authState.adminName,
               );
 
               return Scaffold(
                 backgroundColor: AppColors.scaffoldBackground,
-                drawer: isMobile ? Drawer(child: sidebarWidget) : null,
                 body: Row(
                   children: [
                     // Sidebar for Desktop & Tablet
@@ -59,16 +60,22 @@ class AdminLayout extends StatelessWidget {
                           // Header
                           _AdminHeader(
                             title: title,
-                            showMenu: isMobile,
+                            showMenu: false,
                             adminName: authState.adminName,
                           ),
                           // Content Body
-                          Expanded(child: SelectionArea(child: child)),
+                          Expanded(child: navigationShell),
                         ],
                       ),
                     ),
                   ],
                 ),
+                bottomNavigationBar: isMobile
+                    ? _AdminBottomNavBar(
+                        navigationShell: navigationShell,
+                        adminName: authState.adminName,
+                      )
+                    : null,
               );
             },
           );
@@ -121,50 +128,11 @@ class _AdminHeader extends StatelessWidget {
           ),
           // User profile / info dropdown
           PopupMenuButton<int>(
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!showMenu) ...[
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          adminName,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                        const Text(
-                          'Administrator',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AppColors.primarySoft,
-                    child: Icon(Icons.person, color: AppColors.primary, size: 18),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
-                ],
-              ),
-            ),
             offset: const Offset(0, 50),
             position: PopupMenuPosition.under,
             onSelected: (val) {
               if (val == 1) {
-                _showProfileDialog(context);
+                _showProfileDialog(context, adminName);
               } else if (val == 2) {
                 _showSettingsDialog(context);
               } else if (val == 3) {
@@ -192,7 +160,7 @@ class _AdminHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              const PopupMenuDivider(),
+              const PopupMenuDivider(color: AppColors.border),
               const PopupMenuItem(
                 value: 3,
                 child: Row(
@@ -204,243 +172,23 @@ class _AdminHeader extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLogoutConfirmDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Confirm Logout'),
-        content: const Text('Are you sure you want to log out of the Admin session?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogCtx);
-              context.read<AdminAuthCubit>().logout();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showProfileDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('My Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircleAvatar(
-              radius: 36,
-              backgroundColor: AppColors.primarySoft,
-              child: Icon(Icons.person, color: AppColors.primary, size: 40),
-            ),
-            const SizedBox(height: 16),
-            Text(adminName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const Text('Super Admin Role', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-            _buildProfileRow('Email', 'admin@lemakin.com'),
-            _buildProfileRow('Permissions', 'All Access'),
-            _buildProfileRow('Joined', 'August 2026'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSettingsDialog(BuildContext context) {
-    bool isShopOpen = true;
-    bool isPrinterEnabled = true;
-    bool isNotifEnabled = true;
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('System Settings'),
-            content: SingleChildScrollView(
-              child: Column(
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSettingField('Shop Name', 'Lemakin Restaurant'),
-                  _buildSettingField('Tax Rate (%)', '10'),
-                  _buildSettingField('Service Charge (%)', '5'),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Operational Status & Hours',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondary,
-                    ),
+                  const CircleAvatar(
+                    radius: 16,
+                    backgroundColor: AppColors.primarySoft,
+                    child: Icon(Icons.person, color: AppColors.primary, size: 18),
                   ),
-                  const SizedBox(height: 6),
-                  SwitchListTile(
-                    title: const Text('Store Status', style: TextStyle(fontSize: 14)),
-                    subtitle: Text(
-                      isShopOpen ? 'Shop is OPEN for orders' : 'Shop is CLOSED for orders',
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                    value: isShopOpen,
-                    onChanged: (val) {
-                      setState(() {
-                        isShopOpen = val;
-                      });
-                    },
-                    activeColor: AppColors.success,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSettingField('Opening Time', '09:00'),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSettingField('Closing Time', '22:00'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Devices & Notifications',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  SwitchListTile(
-                    title: const Text('Kitchen Printer', style: TextStyle(fontSize: 14)),
-                    subtitle: const Text('Print order ticket on checkout', style: TextStyle(fontSize: 11)),
-                    value: isPrinterEnabled,
-                    onChanged: (val) {
-                      setState(() {
-                        isPrinterEnabled = val;
-                      });
-                    },
-                    activeColor: AppColors.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  SwitchListTile(
-                    title: const Text('Push Notifications', style: TextStyle(fontSize: 14)),
-                    subtitle: const Text('Play sound on new orders', style: TextStyle(fontSize: 11)),
-                    value: isNotifEnabled,
-                    onChanged: (val) {
-                      setState(() {
-                        isNotifEnabled = val;
-                      });
-                    },
-                    activeColor: AppColors.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: 12),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(dialogCtx);
-                        _seedFirestoreData(context);
-                      },
-                      icon: const Icon(Icons.cloud_upload_outlined, size: 16),
-                      label: const Text(
-                        'Seed Initial Data to Firestore',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
                 ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Settings saved successfully!')),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Save Changes'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildProfileRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSettingField(String label, String initialValue) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: TextFormField(
-        initialValue: initialValue,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(fontSize: 12),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        ),
       ),
     );
   }
@@ -448,12 +196,12 @@ class _AdminHeader extends StatelessWidget {
 
 class _SidebarContent extends StatelessWidget {
   final bool isCollapsed;
-  final String currentPath;
+  final StatefulNavigationShell navigationShell;
   final String adminName;
 
   const _SidebarContent({
     required this.isCollapsed,
-    required this.currentPath,
+    required this.navigationShell,
     required this.adminName,
   });
 
@@ -507,31 +255,31 @@ class _SidebarContent extends StatelessWidget {
             context,
             icon: Icons.dashboard,
             label: 'Dashboard',
-            path: '/admin/dashboard',
+            index: 0,
           ),
           _buildSidebarItem(
             context,
             icon: Icons.restaurant_menu,
             label: 'Menu Management',
-            path: '/admin/menu',
+            index: 1,
           ),
           _buildSidebarItem(
             context,
             icon: Icons.account_balance_wallet,
             label: 'Income Reports',
-            path: '/admin/reports/income',
+            index: 2,
           ),
           _buildSidebarItem(
             context,
             icon: Icons.receipt_long,
             label: 'Expense Reports',
-            path: '/admin/reports/expense',
+            index: 3,
           ),
           _buildSidebarItem(
             context,
             icon: Icons.settings,
             label: 'Settings',
-            path: 'settings',
+            index: -1,
             isSettings: true,
           ),
           const Spacer(),
@@ -540,7 +288,7 @@ class _SidebarContent extends StatelessWidget {
             context,
             icon: Icons.power_settings_new,
             label: 'Logout',
-            path: 'logout',
+            index: -1,
             isLogout: true,
           ),
           const SizedBox(height: 20),
@@ -553,12 +301,12 @@ class _SidebarContent extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required String label,
-    required String path,
+    required int index,
     bool isLogout = false,
     bool isSettings = false,
   }) {
     // Determine active route
-    final bool isActive = !isLogout && !isSettings && currentPath.startsWith(path);
+    final bool isActive = !isLogout && !isSettings && navigationShell.currentIndex == index;
     final activeColor = AppColors.primary;
     final inactiveColor = Colors.white70;
 
@@ -567,7 +315,7 @@ class _SidebarContent extends StatelessWidget {
       child: InkWell(
         onTap: () {
           if (isLogout) {
-            _showLogoutConfirm(context);
+            _showLogoutConfirmDialog(context);
           } else if (isSettings) {
             if (Scaffold.of(context).hasDrawer) {
               Navigator.pop(context);
@@ -577,7 +325,10 @@ class _SidebarContent extends StatelessWidget {
             if (Scaffold.of(context).hasDrawer) {
               Navigator.pop(context);
             }
-            context.go(path);
+            navigationShell.goBranch(
+              index,
+              initialLocation: index == navigationShell.currentIndex,
+            );
           }
         },
         borderRadius: BorderRadius.circular(10),
@@ -623,198 +374,6 @@ class _SidebarContent extends StatelessWidget {
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showLogoutConfirm(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Confirm Logout'),
-        content: const Text(
-          'Are you sure you want to log out of the Admin session?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogCtx);
-              context.read<AdminAuthCubit>().logout();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSettingsDialog(BuildContext context) {
-    bool isShopOpen = true;
-    bool isPrinterEnabled = true;
-    bool isNotifEnabled = true;
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('System Settings'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSettingField('Shop Name', 'Lemakin Restaurant'),
-                  _buildSettingField('Tax Rate (%)', '10'),
-                  _buildSettingField('Service Charge (%)', '5'),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Operational Status & Hours',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  SwitchListTile(
-                    title: const Text('Store Status', style: TextStyle(fontSize: 14)),
-                    subtitle: Text(
-                      isShopOpen ? 'Shop is OPEN for orders' : 'Shop is CLOSED for orders',
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                    value: isShopOpen,
-                    onChanged: (val) {
-                      setState(() {
-                        isShopOpen = val;
-                      });
-                    },
-                    activeColor: AppColors.success,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSettingField('Opening Time', '09:00'),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSettingField('Closing Time', '22:00'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Devices & Notifications',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  SwitchListTile(
-                    title: const Text('Kitchen Printer', style: TextStyle(fontSize: 14)),
-                    subtitle: const Text('Print order ticket on checkout', style: TextStyle(fontSize: 11)),
-                    value: isPrinterEnabled,
-                    onChanged: (val) {
-                      setState(() {
-                        isPrinterEnabled = val;
-                      });
-                    },
-                    activeColor: AppColors.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  SwitchListTile(
-                    title: const Text('Push Notifications', style: TextStyle(fontSize: 14)),
-                    subtitle: const Text('Play sound on new orders', style: TextStyle(fontSize: 11)),
-                    value: isNotifEnabled,
-                    onChanged: (val) {
-                      setState(() {
-                        isNotifEnabled = val;
-                      });
-                    },
-                    activeColor: AppColors.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: 12),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(dialogCtx);
-                        _seedFirestoreData(context);
-                      },
-                      icon: const Icon(Icons.cloud_upload_outlined, size: 16),
-                      label: const Text(
-                        'Seed Initial Data to Firestore',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Settings saved successfully!')),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Save Changes'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSettingField(String label, String initialValue) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: TextFormField(
-        initialValue: initialValue,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(fontSize: 12),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
     );
@@ -971,5 +530,794 @@ Future<void> _seedFirestoreData(BuildContext context) async {
         ),
       );
     }
+  }
+}
+
+// ==========================================
+// File-Level Common Admin Dialog Helpers
+// ==========================================
+
+void _showLogoutConfirmDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Confirm Logout'),
+      content: const Text('Are you sure you want to log out of the Admin session?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogCtx),
+          child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(dialogCtx);
+            context.read<AdminAuthCubit>().logout();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.error,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: const Text('Logout'),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showProfileDialog(BuildContext context, String adminName) {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    backgroundColor: Colors.white,
+    isScrollControlled: true,
+    builder: (sheetCtx) {
+            final emailPrefix = adminName.toLowerCase().replaceAll(' ', '.');
+            final dynamicEmail = emailPrefix.contains('@') ? emailPrefix : '$emailPrefix@lemakin.com';
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Bottom sheet drag handle indicator
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'My Profile',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const CircleAvatar(
+                    radius: 36,
+                    backgroundColor: AppColors.primarySoft,
+                    child: Icon(Icons.person, color: AppColors.primary, size: 40),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(adminName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text('Super Admin Role', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  const SizedBox(height: 16),
+                  const Divider(color: AppColors.border),
+                  const SizedBox(height: 8),
+                  _buildProfileRow('Email', dynamicEmail),
+            _buildProfileRow('Permissions', 'All Access'),
+            _buildProfileRow('Joined', 'August 2026'),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: GradientButton(
+                onPressed: () => Navigator.pop(sheetCtx),
+                borderRadius: 12,
+                child: const Text(
+                  'Close',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+void _showSettingsDialog(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    backgroundColor: Colors.white,
+    isScrollControlled: true,
+    builder: (sheetCtx) {
+      return FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('settings').doc('store').get(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SizedBox(
+              height: 250,
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            );
+          }
+
+          bool isShopOpen = true;
+          bool isClosedTemporarily = false;
+          DateTime? closedUntil;
+
+          if (snapshot.hasData && snapshot.data!.exists) {
+            final sData = snapshot.data!.data() as Map<String, dynamic>;
+            isShopOpen = sData['isShopOpen'] as bool? ?? true;
+            isClosedTemporarily = sData['isClosedTemporarily'] as bool? ?? false;
+            if (sData['closedUntil'] != null) {
+              closedUntil = DateTime.tryParse(sData['closedUntil'] as String);
+            }
+          }
+
+          // Check if temp closed has expired
+          if (isClosedTemporarily && closedUntil != null && closedUntil.isBefore(DateTime.now())) {
+            isClosedTemporarily = false;
+            closedUntil = null;
+          }
+
+          bool isPrinterEnabled = true;
+          bool isNotifEnabled = true;
+
+          return StatefulBuilder(
+            builder: (context, setState) {
+              final isTempClosedNow = isClosedTemporarily &&
+                  closedUntil != null &&
+                  closedUntil!.isAfter(DateTime.now());
+
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 24,
+                  bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Bottom sheet drag handle indicator
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Center(
+                        child: Text(
+                          'System Settings',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildSettingField('Shop Name', 'Lemakin Restaurant'),
+                      _buildSettingField('Tax Rate (%)', '10'),
+                      _buildSettingField('Service Charge (%)', '5'),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Operational Status & Hours',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SwitchListTile(
+                        title: const Text('Store Status', style: TextStyle(fontSize: 14)),
+                        subtitle: Text(
+                          isShopOpen
+                              ? (isTempClosedNow
+                                  ? 'Outlet Tutup Sementara s.d ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil?.minute.toString().padLeft(2, '0')}'
+                                  : 'Shop is OPEN for orders')
+                              : 'Shop is CLOSED for orders',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isTempClosedNow ? AppColors.error : AppColors.textSecondary,
+                            fontWeight: isTempClosedNow ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        value: isShopOpen,
+                        onChanged: (val) {
+                          setState(() {
+                            isShopOpen = val;
+                            if (!val) {
+                              isClosedTemporarily = false;
+                              closedUntil = null;
+                            }
+                          });
+                        },
+                        activeColor: isTempClosedNow ? AppColors.error : AppColors.success,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+
+                      if (isShopOpen) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Tutup Sementara',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Tutup outlet selama durasi tertentu. Toko akan otomatis terbuka kembali setelah waktu habis.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              if (isTempClosedNow) ...[
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Status: Tutup Sementara',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.error,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Hingga pukul ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil!.minute.toString().padLeft(2, '0')} (${closedUntil!.difference(DateTime.now()).inMinutes} menit lagi)',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          isClosedTemporarily = false;
+                                          closedUntil = null;
+                                        });
+                                      },
+                                      child: const Text('Buka Sekarang'),
+                                    ),
+                                  ],
+                                ),
+                              ] else ...[
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    _buildDurationChip(context, '15 Menit', 15, setState, (dt) {
+                                      setState(() {
+                                        isClosedTemporarily = true;
+                                        closedUntil = dt;
+                                      });
+                                    }),
+                                    _buildDurationChip(context, '30 Menit', 30, setState, (dt) {
+                                      setState(() {
+                                        isClosedTemporarily = true;
+                                        closedUntil = dt;
+                                      });
+                                    }),
+                                    _buildDurationChip(context, '1 Jam', 60, setState, (dt) {
+                                      setState(() {
+                                        isClosedTemporarily = true;
+                                        closedUntil = dt;
+                                      });
+                                    }),
+                                    _buildDurationChip(context, '2 Jam', 120, setState, (dt) {
+                                      setState(() {
+                                        isClosedTemporarily = true;
+                                        closedUntil = dt;
+                                      });
+                                    }),
+                                    ActionChip(
+                                      label: const Text('Custom'),
+                                      onPressed: () async {
+                                        final TimeOfDay? pickedTime = await showTimePicker(
+                                          context: context,
+                                          initialTime: TimeOfDay.now(),
+                                        );
+                                        if (pickedTime != null) {
+                                          final now = DateTime.now();
+                                          var targetDateTime = DateTime(
+                                            now.year,
+                                            now.month,
+                                            now.day,
+                                            pickedTime.hour,
+                                            pickedTime.minute,
+                                          );
+                                          if (targetDateTime.isBefore(now)) {
+                                            targetDateTime = targetDateTime.add(const Duration(days: 1));
+                                          }
+                                          setState(() {
+                                            isClosedTemporarily = true;
+                                            closedUntil = targetDateTime;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildSettingField('Opening Time', '09:00'),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildSettingField('Closing Time', '22:00'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(color: AppColors.border),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Devices & Notifications',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SwitchListTile(
+                        title: const Text('Kitchen Printer', style: TextStyle(fontSize: 14)),
+                        subtitle: const Text('Print order ticket on checkout', style: TextStyle(fontSize: 11)),
+                        value: isPrinterEnabled,
+                        onChanged: (val) {
+                          setState(() {
+                            isPrinterEnabled = val;
+                          });
+                        },
+                        activeColor: AppColors.primary,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      SwitchListTile(
+                        title: const Text('Push Notifications', style: TextStyle(fontSize: 14)),
+                        subtitle: const Text('Play sound on new orders', style: TextStyle(fontSize: 11)),
+                        value: isNotifEnabled,
+                        onChanged: (val) {
+                          setState(() {
+                            isNotifEnabled = val;
+                          });
+                        },
+                        activeColor: AppColors.primary,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(color: AppColors.border),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(sheetCtx);
+                            _seedFirestoreData(context);
+                          },
+                          icon: const Icon(Icons.cloud_upload_outlined, size: 16),
+                          label: const Text(
+                            'Seed Initial Data to Firestore',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(sheetCtx),
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                ),
+                                child: const Text('Cancel'),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: GradientButton(
+                              onPressed: () async {
+                                // Save to Firestore settings
+                                try {
+                                  await FirebaseFirestore.instance.collection('settings').doc('store').set({
+                                    'isShopOpen': isShopOpen,
+                                    'isClosedTemporarily': isClosedTemporarily,
+                                    'closedUntil': closedUntil?.toIso8601String(),
+                                  }, SetOptions(merge: true));
+
+                                  if (context.mounted) {
+                                    Navigator.pop(sheetCtx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Settings saved successfully!')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Failed to save settings: $e'), backgroundColor: AppColors.error),
+                                    );
+                                  }
+                                }
+                              },
+                              borderRadius: 12,
+                              child: const Text(
+                                'Save Changes',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    },
+  );
+}
+
+Widget _buildDurationChip(
+  BuildContext context,
+  String label,
+  int minutes,
+  StateSetter setState,
+  void Function(DateTime) onSelect,
+) {
+  return ActionChip(
+    label: Text(label, style: const TextStyle(fontSize: 12)),
+    onPressed: () {
+      final targetTime = DateTime.now().add(Duration(minutes: minutes));
+      onSelect(targetTime);
+    },
+  );
+}
+
+
+Widget _buildProfileRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+      ],
+    ),
+  );
+}
+
+Widget _buildSettingField(String label, String initialValue) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6.0),
+    child: TextFormField(
+      initialValue: initialValue,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(fontSize: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+    ),
+  );
+}
+
+// ==========================================
+// Bottom Navigation Bar Widget and Helpers
+// ==========================================
+
+class _BottomNavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final int index;
+  final bool isAction;
+  final VoidCallback? onTap;
+
+  _BottomNavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.index,
+    this.isAction = false,
+    this.onTap,
+  });
+}
+
+class _AdminBottomNavBar extends StatelessWidget {
+  final StatefulNavigationShell navigationShell;
+  final String adminName;
+
+  const _AdminBottomNavBar({
+    required this.navigationShell,
+    required this.adminName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      _BottomNavItem(
+        icon: Icons.dashboard_outlined,
+        activeIcon: Icons.dashboard_rounded,
+        label: 'Dashboard',
+        index: 0,
+      ),
+      _BottomNavItem(
+        icon: Icons.restaurant_menu_outlined,
+        activeIcon: Icons.restaurant_menu_rounded,
+        label: 'Menu',
+        index: 1,
+      ),
+      _BottomNavItem(
+        icon: Icons.account_balance_wallet_outlined,
+        activeIcon: Icons.account_balance_wallet_rounded,
+        label: 'Income',
+        index: 2,
+      ),
+      _BottomNavItem(
+        icon: Icons.receipt_long_outlined,
+        activeIcon: Icons.receipt_long_rounded,
+        label: 'Expense',
+        index: 3,
+      ),
+      _BottomNavItem(
+        icon: Icons.more_horiz_outlined,
+        activeIcon: Icons.more_horiz_rounded,
+        label: 'More',
+        index: -1,
+        isAction: true,
+        onTap: () => _showMoreSheet(context),
+      ),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: items.map((item) {
+              final bool isActive = !item.isAction && navigationShell.currentIndex == item.index;
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    if (item.isAction) {
+                      item.onTap?.call();
+                    } else {
+                      navigationShell.goBranch(
+                        item.index,
+                        initialLocation: item.index == navigationShell.currentIndex,
+                      );
+                    }
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: isActive ? AppColors.primaryGradient : null,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isActive ? item.activeIcon : item.icon,
+                          color: isActive ? Colors.white : AppColors.textSecondary,
+                          size: 22,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.label,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                            color: isActive ? Colors.white : AppColors.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMoreSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Header/Profile
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 24,
+                      backgroundColor: AppColors.primarySoft,
+                      child: Icon(Icons.person, color: AppColors.primary, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            adminName,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          const Text(
+                            'Administrator',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 8),
+                // Actions
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.settings_outlined, color: AppColors.textDark),
+                  title: const Text('System Settings', style: TextStyle(fontSize: 14)),
+                  trailing: const Icon(Icons.chevron_right, size: 20),
+                  onTap: () {
+                    Navigator.pop(context); // Close bottom sheet
+                    _showSettingsDialog(context);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.person_outline, color: AppColors.textDark),
+                  title: const Text('My Profile', style: TextStyle(fontSize: 14)),
+                  trailing: const Icon(Icons.chevron_right, size: 20),
+                  onTap: () {
+                    Navigator.pop(context); // Close bottom sheet
+                    _showProfileDialog(context, adminName);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.logout, color: AppColors.error),
+                  title: const Text('Logout', style: TextStyle(color: AppColors.error, fontSize: 14)),
+                  trailing: const Icon(Icons.chevron_right, size: 20, color: AppColors.error),
+                  onTap: () {
+                    Navigator.pop(context); // Close bottom sheet
+                    _showLogoutConfirmDialog(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }

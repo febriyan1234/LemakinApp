@@ -20,7 +20,10 @@ import '../../presentation/admin/menu/cubit/admin_menu_cubit.dart';
 import '../../presentation/admin/layout/admin_layout.dart';
 import '../../presentation/admin/reports/ui/income_reports_page.dart';
 import '../../presentation/admin/reports/ui/expense_reports_page.dart';
+import '../../presentation/admin/reports/ui/admin_add_edit_expense_page.dart';
+import '../../presentation/admin/reports/ui/admin_edit_order_page.dart';
 import '../../presentation/admin/reports/cubit/admin_reports_cubit.dart';
+import '../../domain/entities/expense.dart';
 
 class AppRoutes {
   static const String menu = '/menu';
@@ -35,10 +38,13 @@ class AppRoutes {
   static const String adminMenuAdd = '/admin/menu/add';
   static const String adminMenuEdit = '/admin/menu/edit/:id';
   static const String adminIncomeReports = '/admin/reports/income';
+  static const String adminOrderEdit = '/admin/reports/income/edit';
   static const String adminExpenseReports = '/admin/reports/expense';
+  static const String adminExpenseAdd = '/admin/reports/expense/add';
+  static const String adminExpenseEdit = '/admin/reports/expense/edit/:id';
 
   static final GoRouter router = GoRouter(
-    initialLocation: adminLogin,
+    initialLocation: adminMenu,
     routes: [
       // ----------------- Customer Routes -----------------
       GoRoute(path: menu, builder: (context, state) => const MenuPage()),
@@ -68,8 +74,8 @@ class AppRoutes {
         builder: (context, state) => const AdminLoginPage(),
       ),
 
-      ShellRoute(
-        builder: (context, state, child) {
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
           String title = 'Admin Overview';
           final path = state.uri.path;
           if (path == adminDashboard) {
@@ -82,56 +88,99 @@ class AppRoutes {
             title = 'Expense Reports';
           }
 
-          return AdminLayout(
-            title: title,
-            child: child,
+          return BlocProvider<AdminReportsCubit>(
+            create: (_) => di.sl<AdminReportsCubit>(),
+            child: AdminLayout(
+              navigationShell: navigationShell,
+              title: title,
+            ),
           );
         },
-        routes: [
-          GoRoute(
-            path: adminDashboard,
-            builder: (context, state) => BlocProvider<AdminDashboardCubit>(
-              create: (_) => di.sl<AdminDashboardCubit>(),
-              child: const AdminDashboardPage(),
-            ),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: adminDashboard,
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: BlocProvider<AdminDashboardCubit>(
+                    create: (_) => di.sl<AdminDashboardCubit>(),
+                    child: const AdminDashboardPage(),
+                  ),
+                ),
+              ),
+            ],
           ),
-          GoRoute(
-            path: adminMenu,
-            builder: (context, state) => BlocProvider<AdminMenuCubit>(
-              create: (_) => di.sl<AdminMenuCubit>(),
-              child: const AdminMenuListPage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: adminMenu,
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: BlocProvider<AdminMenuCubit>(
+                    create: (_) => di.sl<AdminMenuCubit>(),
+                    child: const AdminMenuListPage(),
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: adminMenuAdd,
+                builder: (context, state) => BlocProvider<AdminMenuCubit>(
+                  create: (_) => di.sl<AdminMenuCubit>(),
+                  child: const AdminAddEditMenuPage(),
+                ),
+              ),
+              GoRoute(
+                path: '/admin/menu/edit/:id',
+                builder: (context, state) {
+                  final item = state.extra as MenuItem?;
+                  return BlocProvider<AdminMenuCubit>(
+                    create: (_) => di.sl<AdminMenuCubit>(),
+                    child: AdminAddEditMenuPage(menuItem: item),
+                  );
+                },
+              ),
+            ],
           ),
-          GoRoute(
-            path: adminMenuAdd,
-            builder: (context, state) => BlocProvider<AdminMenuCubit>(
-              create: (_) => di.sl<AdminMenuCubit>(),
-              child: const AdminAddEditMenuPage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: adminIncomeReports,
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: IncomeReportsPage(),
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) {
+                      final order = state.extra as OrderEntity;
+                      return AdminEditOrderPage(order: order);
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/admin/menu/edit/:id',
-            builder: (context, state) {
-              final item = state.extra as MenuItem?;
-              return BlocProvider<AdminMenuCubit>(
-                create: (_) => di.sl<AdminMenuCubit>(),
-                child: AdminAddEditMenuPage(menuItem: item),
-              );
-            },
-          ),
-          GoRoute(
-            path: adminIncomeReports,
-            builder: (context, state) => BlocProvider<AdminReportsCubit>(
-              create: (_) => di.sl<AdminReportsCubit>(),
-              child: const IncomeReportsPage(),
-            ),
-          ),
-          GoRoute(
-            path: adminExpenseReports,
-            builder: (context, state) => BlocProvider<AdminReportsCubit>(
-              create: (_) => di.sl<AdminReportsCubit>(),
-              child: const ExpenseReportsPage(),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: adminExpenseReports,
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: ExpenseReportsPage(),
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'add',
+                    builder: (context, state) => const AdminAddEditExpensePage(),
+                  ),
+                  GoRoute(
+                    path: 'edit/:id',
+                    builder: (context, state) {
+                      final item = state.extra as Expense?;
+                      return AdminAddEditExpensePage(expense: item);
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),

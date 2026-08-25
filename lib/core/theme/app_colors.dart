@@ -4,6 +4,15 @@ class AppColors {
   static const Color primary = Color(0xFFFF6500);
   static const Color primarySoft = Color(0xFFFFF0E5);
   
+  static const Gradient primaryGradient = LinearGradient(
+    colors: [
+      Color(0xFFFF5E62),
+      Color(0xFFFF9966),
+    ],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
+  
   static const Color scaffoldBackground = Color(0xFFF8F9FA);
   static const Color cardBackground = Colors.white;
   

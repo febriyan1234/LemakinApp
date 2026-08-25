@@ -1,5 +1,15 @@
 import 'package:equatable/equatable.dart';
 
+class ExpenseItem extends Equatable {
+  final String name;
+  final double price;
+
+  const ExpenseItem({required this.name, required this.price});
+
+  @override
+  List<Object?> get props => [name, price];
+}
+
 class Expense extends Equatable {
   final String id;
   final DateTime date;
@@ -8,6 +18,7 @@ class Expense extends Equatable {
   final double amount;
   final String? notes;
   final String createdBy;
+  final List<ExpenseItem>? items;
 
   const Expense({
     required this.id,
@@ -17,6 +28,7 @@ class Expense extends Equatable {
     required this.amount,
     this.notes,
     required this.createdBy,
+    this.items,
   });
 
   Expense copyWith({
@@ -27,6 +39,7 @@ class Expense extends Equatable {
     double? amount,
     String? notes,
     String? createdBy,
+    List<ExpenseItem>? items,
   }) {
     return Expense(
       id: id ?? this.id,
@@ -36,6 +49,7 @@ class Expense extends Equatable {
       amount: amount ?? this.amount,
       notes: notes ?? this.notes,
       createdBy: createdBy ?? this.createdBy,
+      items: items ?? this.items,
     );
   }
 
@@ -48,5 +62,6 @@ class Expense extends Equatable {
         amount,
         notes,
         createdBy,
+        items,
       ];
 }

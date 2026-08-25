@@ -16,6 +16,7 @@ class AdminMenuLoading extends AdminMenuState {}
 class AdminMenuLoaded extends AdminMenuState {
   final List<MenuItem> menuItems;
   final List<MenuCategory> categories;
+  final List<MenuVariant> variants;
   final String selectedCategoryId;
   final String selectedStatus;
   final String searchQuery;
@@ -26,6 +27,7 @@ class AdminMenuLoaded extends AdminMenuState {
   const AdminMenuLoaded({
     required this.menuItems,
     required this.categories,
+    required this.variants,
     required this.selectedCategoryId,
     required this.selectedStatus,
     required this.searchQuery,
@@ -37,6 +39,7 @@ class AdminMenuLoaded extends AdminMenuState {
   AdminMenuLoaded copyWith({
     List<MenuItem>? menuItems,
     List<MenuCategory>? categories,
+    List<MenuVariant>? variants,
     String? selectedCategoryId,
     String? selectedStatus,
     String? searchQuery,
@@ -47,6 +50,7 @@ class AdminMenuLoaded extends AdminMenuState {
     return AdminMenuLoaded(
       menuItems: menuItems ?? this.menuItems,
       categories: categories ?? this.categories,
+      variants: variants ?? this.variants,
       selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
       selectedStatus: selectedStatus ?? this.selectedStatus,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -60,6 +64,7 @@ class AdminMenuLoaded extends AdminMenuState {
   List<Object?> get props => [
         menuItems,
         categories,
+        variants,
         selectedCategoryId,
         selectedStatus,
         searchQuery,
