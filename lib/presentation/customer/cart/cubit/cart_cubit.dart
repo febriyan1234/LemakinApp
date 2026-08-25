@@ -5,18 +5,21 @@ import '../../../../domain/usecases/get_cart_usecase.dart';
 import '../../../../domain/usecases/add_item_to_cart_usecase.dart';
 import '../../../../domain/usecases/remove_item_from_cart_usecase.dart';
 import '../../../../domain/usecases/update_cart_item_usecase.dart';
+import '../../../../domain/usecases/clear_cart_usecase.dart';
 
 class CartCubit extends Cubit<CartState> {
   final GetCartUseCase getCartUseCase;
   final AddItemToCartUseCase addItemToCartUseCase;
   final RemoveItemFromCartUseCase removeItemFromCartUseCase;
   final UpdateCartItemUseCase updateCartItemUseCase;
+  final ClearCartUseCase clearCartUseCase;
 
   CartCubit({
     required this.getCartUseCase,
     required this.addItemToCartUseCase,
     required this.removeItemFromCartUseCase,
     required this.updateCartItemUseCase,
+    required this.clearCartUseCase,
   }) : super(CartInitial());
 
   Future<void> loadCart() async {
@@ -100,7 +103,13 @@ class CartCubit extends Cubit<CartState> {
     }
   }
 
-  void clearCart() {
-    emit(const CartLoaded(items: []));
+  Future<void> clearCart() async {
+    emit(CartLoading());
+    try {
+      await clearCartUseCase.execute();
+      emit(const CartLoaded(items: []));
+    } catch (e) {
+      emit(CartError(e.toString()));
+    }
   }
 }

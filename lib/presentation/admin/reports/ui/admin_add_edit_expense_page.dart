@@ -289,9 +289,9 @@ class _AdminAddEditExpensePageState extends State<AdminAddEditExpensePage> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Description Input
+                      // Title Input
                       const Text(
-                        'Description *',
+                        'Title *',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -303,7 +303,7 @@ class _AdminAddEditExpensePageState extends State<AdminAddEditExpensePage> {
                         controller: _descController,
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
-                            return 'Description is required';
+                            return 'Title is required';
                           }
                           return null;
                         },

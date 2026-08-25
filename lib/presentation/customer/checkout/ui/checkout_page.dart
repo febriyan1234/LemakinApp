@@ -219,8 +219,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
             if (state is CheckoutSuccess) {
               await _redirectToWhatsApp(state.order);
               if (context.mounted) {
-                context.read<CartCubit>().clearCart();
-                context.go('/menu');
+                await context.read<CartCubit>().clearCart();
+                if (context.mounted) {
+                  context.go('/menu');
+                }
               }
             } else if (state is CheckoutError) {
               ScaffoldMessenger.of(context).showSnackBar(

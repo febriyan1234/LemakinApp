@@ -34,6 +34,7 @@ import '../../domain/usecases/get_menu_usecase.dart';
 import '../../domain/usecases/remove_item_from_cart_usecase.dart';
 import '../../domain/usecases/update_cart_item_usecase.dart';
 import '../../domain/usecases/admin_menu_usecase.dart';
+import '../../domain/usecases/clear_cart_usecase.dart';
 
 // Cubits / Blocs
 import '../../presentation/customer/cart/cubit/cart_cubit.dart';
@@ -57,6 +58,7 @@ Future<void> init() async {
       addItemToCartUseCase: sl(),
       removeItemFromCartUseCase: sl(),
       updateCartItemUseCase: sl(),
+      clearCartUseCase: sl(),
     ),
   );
 
@@ -97,6 +99,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetCartUseCase(sl()));
   sl.registerLazySingleton(() => CreateOrderUseCase(sl()));
   sl.registerLazySingleton(() => AdminMenuUseCase(sl()));
+  sl.registerLazySingleton(() => ClearCartUseCase(sl()));
 
   // ----------------- Data: Repositories -----------------
   sl.registerLazySingleton<MenuRepository>(

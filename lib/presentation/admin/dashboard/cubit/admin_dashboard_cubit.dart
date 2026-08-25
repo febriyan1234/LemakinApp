@@ -4,6 +4,7 @@ import '../../../../domain/repositories/menu_repository.dart';
 import '../../../../domain/repositories/expense_repository.dart';
 import '../../../../domain/repositories/order_repository.dart';
 import 'admin_dashboard_state.dart';
+import '../../../../domain/entities/order.dart';
 
 class AdminDashboardCubit extends Cubit<AdminDashboardState> {
   final MenuRepository menuRepository;
@@ -17,7 +18,7 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
   }) : super(AdminDashboardInitial());
 
   Future<void> loadDashboard({
-    String period = 'Last 7 Days',
+    String period = 'Today',
     DateTime? startDate,
     DateTime? endDate,
   }) async {
@@ -58,14 +59,22 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
       );
 
       // 4. Filter orders and expenses based on selected period
-      DateTime filterStart = todayStart.subtract(
-        const Duration(days: 6),
-      ); // Default 7 days
+      DateTime filterStart = todayStart; // Default Today
       DateTime filterEnd = todayEnd;
 
       if (period == 'Today') {
         filterStart = todayStart;
         filterEnd = todayEnd;
+      } else if (period == 'Yesterday') {
+        filterStart = todayStart.subtract(const Duration(days: 1));
+        filterEnd = DateTime(
+          filterStart.year,
+          filterStart.month,
+          filterStart.day,
+          23,
+          59,
+          59,
+        );
       } else if (period == 'Last 7 Days') {
         filterStart = DateTime(
           now.year,
@@ -123,22 +132,28 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
           totalSales: entry.value.totalPrice,
         );
       }).toList();
-      bestSellersList.sort((a, b) => b.soldCount.compareTo(a.soldCount));
-      final topBestSellers = bestSellersList.take(5).toList();
+      bestSellersList.sort((a, b) {
+        final compareSold = b.soldCount.compareTo(a.soldCount);
+        if (compareSold != 0) return compareSold;
+        
+        final compareSales = b.totalSales.compareTo(a.totalSales);
+        if (compareSales != 0) return compareSales;
+        
+        return a.menuName.compareTo(b.menuName);
+      });
+      final topBestSellers = bestSellersList.take(3).toList();
 
       // 6. Generate Sales Chart Data
       final List<SalesChartData> chartDataList = [];
 
-      if (period == 'Today') {
-        // Group by 3-hour intervals: 09:00, 12:00, 15:00, 18:00, 21:00
-        final intervals = [9, 12, 15, 18, 21];
+      if (period == 'Today' || period == 'Yesterday') {
+        // Group by 4-hour intervals to cover all 24 hours
+        final intervals = [4, 8, 12, 16, 20, 24];
         for (final hour in intervals) {
-          final startHour = DateTime(now.year, now.month, now.day, hour - 3);
-          final endHour = DateTime(now.year, now.month, now.day, hour);
-          final hourOrders = periodOrders.where(
-            (o) =>
-                o.createdAt.isAfter(startHour) && o.createdAt.isBefore(endHour),
-          );
+          final hourOrders = periodOrders.where((o) {
+            final h = o.createdAt.hour;
+            return h >= (hour - 4) && h < hour;
+          }).toList();
 
           final count = hourOrders.length;
           final sales = hourOrders.fold(0.0, (sum, o) => sum + o.total);
@@ -148,7 +163,7 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
 
           chartDataList.add(
             SalesChartData(
-              label: '${hour - 3}:00-${hour}:00',
+              label: '${(hour - 4).toString().padLeft(2, '0')}:00-${hour.toString().padLeft(2, '0')}:00',
               transactionCount: count,
               salesAmount: sales,
               incomeAmount: income,
@@ -272,6 +287,10 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
         }
       }
 
+      final sortedOrders = List<OrderEntity>.from(periodOrders);
+      sortedOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final recentOrders = sortedOrders.take(4).toList();
+
       emit(
         AdminDashboardLoaded(
           todaySales: todaySales,
@@ -282,6 +301,7 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
           inactiveMenus: inactiveMenusCount,
           bestSellers: topBestSellers,
           chartDataList: chartDataList,
+          recentOrders: recentOrders,
           selectedPeriod: period,
           startDate: startDate,
           endDate: endDate,

@@ -271,7 +271,7 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
             controller: _searchController,
             onChanged: (val) => _cubit.updateExpenseFilters(query: val),
             decoration: InputDecoration(
-              hintText: 'Search description...',
+              hintText: 'Search title...',
               prefixIcon: const Icon(Icons.search, size: 18),
               contentPadding: const EdgeInsets.symmetric(
                 vertical: 10,
@@ -476,7 +476,7 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
                 _buildDetailRow('Expense ID:', expense.id),
                 _buildDetailRow('Date:', _formatIndoDate(expense.date)),
                 _buildDetailRow('Category:', expense.category),
-                _buildDetailRow('Description:', expense.description),
+                _buildDetailRow('Title:', expense.description),
                 _buildDetailRow(
                   'Amount:',
                   CurrencyFormatter.format(expense.amount),
@@ -590,7 +590,7 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      expense.id,
+                      expense.description,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -602,10 +602,10 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  expense.description,
+                  expense.id,
                   style: const TextStyle(
                     fontSize: 13,
-                    color: AppColors.textDark,
+                    color: AppColors.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -743,7 +743,7 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
           ),
           DataColumn(
             label: Text(
-              'Description',
+              'Title',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),

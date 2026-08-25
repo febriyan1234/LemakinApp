@@ -57,16 +57,23 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
             children: [
               // Logo or Icon
               Container(
-                width: 80,
-                height: 80,
+                width: 85,
+                height: 85,
                 decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.admin_panel_settings,
-                  color: AppColors.primary,
-                  size: 48,
+                padding: const EdgeInsets.all(12.0),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(height: 24),

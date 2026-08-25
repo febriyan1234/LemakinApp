@@ -380,6 +380,7 @@ class _SidebarContent extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 Future<void> _seedFirestoreData(BuildContext context) async {
   try {
     final menuRepo = di.sl<MenuRepository>();
@@ -663,12 +664,16 @@ void _showSettingsDialog(BuildContext context) {
             );
           }
 
+          String restaurantName = 'Lemakin Restaurant';
+          String logoUrl = '';
           bool isShopOpen = true;
           bool isClosedTemporarily = false;
           DateTime? closedUntil;
 
           if (snapshot.hasData && snapshot.data!.exists) {
-            final sData = snapshot.data!.data() as Map<String, dynamic>;
+            final sData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+            restaurantName = sData['restaurantName'] as String? ?? 'Lemakin Restaurant';
+            logoUrl = sData['logoUrl'] as String? ?? '';
             isShopOpen = sData['isShopOpen'] as bool? ?? true;
             isClosedTemporarily = sData['isClosedTemporarily'] as bool? ?? false;
             if (sData['closedUntil'] != null) {
@@ -682,350 +687,13 @@ void _showSettingsDialog(BuildContext context) {
             closedUntil = null;
           }
 
-          bool isPrinterEnabled = true;
-          bool isNotifEnabled = true;
-
-          return StatefulBuilder(
-            builder: (context, setState) {
-              final isTempClosedNow = isClosedTemporarily &&
-                  closedUntil != null &&
-                  closedUntil!.isAfter(DateTime.now());
-
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: 24,
-                  right: 24,
-                  top: 24,
-                  bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Bottom sheet drag handle indicator
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Center(
-                        child: Text(
-                          'System Settings',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildSettingField('Shop Name', 'Lemakin Restaurant'),
-                      _buildSettingField('Tax Rate (%)', '10'),
-                      _buildSettingField('Service Charge (%)', '5'),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Operational Status & Hours',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      SwitchListTile(
-                        title: const Text('Store Status', style: TextStyle(fontSize: 14)),
-                        subtitle: Text(
-                          isShopOpen
-                              ? (isTempClosedNow
-                                  ? 'Outlet Tutup Sementara s.d ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil?.minute.toString().padLeft(2, '0')}'
-                                  : 'Shop is OPEN for orders')
-                              : 'Shop is CLOSED for orders',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isTempClosedNow ? AppColors.error : AppColors.textSecondary,
-                            fontWeight: isTempClosedNow ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
-                        value: isShopOpen,
-                        onChanged: (val) {
-                          setState(() {
-                            isShopOpen = val;
-                            if (!val) {
-                              isClosedTemporarily = false;
-                              closedUntil = null;
-                            }
-                          });
-                        },
-                        activeColor: isTempClosedNow ? AppColors.error : AppColors.success,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-
-                      if (isShopOpen) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[200]!),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Tutup Sementara',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Tutup outlet selama durasi tertentu. Toko akan otomatis terbuka kembali setelah waktu habis.',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              if (isTempClosedNow) ...[
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Status: Tutup Sementara',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.error,
-                                            ),
-                                          ),
-                                          Text(
-                                            'Hingga pukul ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil!.minute.toString().padLeft(2, '0')} (${closedUntil!.difference(DateTime.now()).inMinutes} menit lagi)',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: AppColors.textSecondary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        setState(() {
-                                          isClosedTemporarily = false;
-                                          closedUntil = null;
-                                        });
-                                      },
-                                      child: const Text('Buka Sekarang'),
-                                    ),
-                                  ],
-                                ),
-                              ] else ...[
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    _buildDurationChip(context, '15 Menit', 15, setState, (dt) {
-                                      setState(() {
-                                        isClosedTemporarily = true;
-                                        closedUntil = dt;
-                                      });
-                                    }),
-                                    _buildDurationChip(context, '30 Menit', 30, setState, (dt) {
-                                      setState(() {
-                                        isClosedTemporarily = true;
-                                        closedUntil = dt;
-                                      });
-                                    }),
-                                    _buildDurationChip(context, '1 Jam', 60, setState, (dt) {
-                                      setState(() {
-                                        isClosedTemporarily = true;
-                                        closedUntil = dt;
-                                      });
-                                    }),
-                                    _buildDurationChip(context, '2 Jam', 120, setState, (dt) {
-                                      setState(() {
-                                        isClosedTemporarily = true;
-                                        closedUntil = dt;
-                                      });
-                                    }),
-                                    ActionChip(
-                                      label: const Text('Custom'),
-                                      onPressed: () async {
-                                        final TimeOfDay? pickedTime = await showTimePicker(
-                                          context: context,
-                                          initialTime: TimeOfDay.now(),
-                                        );
-                                        if (pickedTime != null) {
-                                          final now = DateTime.now();
-                                          var targetDateTime = DateTime(
-                                            now.year,
-                                            now.month,
-                                            now.day,
-                                            pickedTime.hour,
-                                            pickedTime.minute,
-                                          );
-                                          if (targetDateTime.isBefore(now)) {
-                                            targetDateTime = targetDateTime.add(const Duration(days: 1));
-                                          }
-                                          setState(() {
-                                            isClosedTemporarily = true;
-                                            closedUntil = targetDateTime;
-                                          });
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildSettingField('Opening Time', '09:00'),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildSettingField('Closing Time', '22:00'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(color: AppColors.border),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Devices & Notifications',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      SwitchListTile(
-                        title: const Text('Kitchen Printer', style: TextStyle(fontSize: 14)),
-                        subtitle: const Text('Print order ticket on checkout', style: TextStyle(fontSize: 11)),
-                        value: isPrinterEnabled,
-                        onChanged: (val) {
-                          setState(() {
-                            isPrinterEnabled = val;
-                          });
-                        },
-                        activeColor: AppColors.primary,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      SwitchListTile(
-                        title: const Text('Push Notifications', style: TextStyle(fontSize: 14)),
-                        subtitle: const Text('Play sound on new orders', style: TextStyle(fontSize: 11)),
-                        value: isNotifEnabled,
-                        onChanged: (val) {
-                          setState(() {
-                            isNotifEnabled = val;
-                          });
-                        },
-                        activeColor: AppColors.primary,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(color: AppColors.border),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(sheetCtx);
-                            _seedFirestoreData(context);
-                          },
-                          icon: const Icon(Icons.cloud_upload_outlined, size: 16),
-                          label: const Text(
-                            'Seed Initial Data to Firestore',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 48,
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.pop(sheetCtx),
-                                style: OutlinedButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                ),
-                                child: const Text('Cancel'),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: GradientButton(
-                              onPressed: () async {
-                                // Save to Firestore settings
-                                try {
-                                  await FirebaseFirestore.instance.collection('settings').doc('store').set({
-                                    'isShopOpen': isShopOpen,
-                                    'isClosedTemporarily': isClosedTemporarily,
-                                    'closedUntil': closedUntil?.toIso8601String(),
-                                  }, SetOptions(merge: true));
-
-                                  if (context.mounted) {
-                                    Navigator.pop(sheetCtx);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Settings saved successfully!')),
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Failed to save settings: $e'), backgroundColor: AppColors.error),
-                                    );
-                                  }
-                                }
-                              },
-                              borderRadius: 12,
-                              child: const Text(
-                                'Save Changes',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+          return _SystemSettingsForm(
+            initialRestaurantName: restaurantName,
+            initialLogoUrl: logoUrl,
+            initialShopOpen: isShopOpen,
+            initialClosedTemporarily: isClosedTemporarily,
+            initialClosedUntil: closedUntil,
+            sheetCtx: sheetCtx,
           );
         },
       );
@@ -1033,18 +701,473 @@ void _showSettingsDialog(BuildContext context) {
   );
 }
 
+class _SystemSettingsForm extends StatefulWidget {
+  final String initialRestaurantName;
+  final String initialLogoUrl;
+  final bool initialShopOpen;
+  final bool initialClosedTemporarily;
+  final DateTime? initialClosedUntil;
+  final BuildContext sheetCtx;
+
+  const _SystemSettingsForm({
+    required this.initialRestaurantName,
+    required this.initialLogoUrl,
+    required this.initialShopOpen,
+    required this.initialClosedTemporarily,
+    required this.initialClosedUntil,
+    required this.sheetCtx,
+  });
+
+  @override
+  State<_SystemSettingsForm> createState() => _SystemSettingsFormState();
+}
+
+class _SystemSettingsFormState extends State<_SystemSettingsForm> {
+  late TextEditingController nameController;
+  late TextEditingController logoController;
+  late bool isShopOpen;
+  late bool isClosedTemporarily;
+  DateTime? closedUntil;
+  int? selectedMinutes;
+
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController(text: widget.initialRestaurantName);
+    logoController = TextEditingController(text: widget.initialLogoUrl);
+    isShopOpen = widget.initialShopOpen;
+    isClosedTemporarily = widget.initialClosedTemporarily;
+    closedUntil = widget.initialClosedUntil;
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    logoController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isTempClosedNow = isClosedTemporarily &&
+        closedUntil != null &&
+        closedUntil!.isAfter(DateTime.now());
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(widget.sheetCtx).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Bottom sheet drag handle indicator
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Center(
+              child: Text(
+                'System Settings',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6.0),
+              child: TextFormField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Restaurant Name',
+                  labelStyle: const TextStyle(fontSize: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ),
+            const Center(
+              child: Text(
+                'Restaurant Logo',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: ListenableBuilder(
+                listenable: logoController,
+                builder: (context, _) {
+                  final hasLogo = logoController.text.isNotEmpty;
+                  return Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey[200]!, width: 1.5),
+                      image: hasLogo
+                          ? DecorationImage(
+                              image: NetworkImage(logoController.text.trim()),
+                              fit: BoxFit.contain,
+                            )
+                          : null,
+                    ),
+                    child: !hasLogo
+                        ? Center(
+                            child: Icon(
+                              Icons.restaurant,
+                              color: Colors.grey[400],
+                              size: 32,
+                            ),
+                          )
+                        : null,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6.0),
+              child: TextFormField(
+                controller: logoController,
+                decoration: InputDecoration(
+                  labelText: 'Logo URL',
+                  labelStyle: const TextStyle(fontSize: 12),
+                  hintText: 'Paste logo image link...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Operational Status & Hours',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            SwitchListTile(
+              title: const Text('Store Status', style: TextStyle(fontSize: 14)),
+              subtitle: Text(
+                isShopOpen
+                    ? (isTempClosedNow
+                        ? 'Outlet Tutup Sementara s.d ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil?.minute.toString().padLeft(2, '0')}'
+                        : 'Store is OPEN for orders')
+                    : 'Store is CLOSED for orders',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isTempClosedNow ? AppColors.error : AppColors.textSecondary,
+                  fontWeight: isTempClosedNow ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              value: isShopOpen,
+              onChanged: (val) {
+                setState(() {
+                  isShopOpen = val;
+                  if (!val) {
+                    isClosedTemporarily = false;
+                    closedUntil = null;
+                    selectedMinutes = null;
+                  }
+                });
+              },
+              activeColor: isTempClosedNow ? AppColors.error : AppColors.success,
+              contentPadding: EdgeInsets.zero,
+            ),
+
+            if (isShopOpen) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tutup Sementara',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Tutup outlet selama durasi tertentu. Toko akan otomatis terbuka kembali setelah waktu habis.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (isTempClosedNow) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Status: Tutup Sementara',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                                Text(
+                                  'Hingga pukul ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil!.minute.toString().padLeft(2, '0')} (${closedUntil!.difference(DateTime.now()).inMinutes} menit lagi)',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                isClosedTemporarily = false;
+                                closedUntil = null;
+                                selectedMinutes = null;
+                              });
+                            },
+                            child: const Text('Buka Sekarang'),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildDurationChip(context, '15 Menit', 15, selectedMinutes == 15, (dt) {
+                            setState(() {
+                              isClosedTemporarily = true;
+                              closedUntil = dt;
+                              selectedMinutes = 15;
+                            });
+                          }),
+                          _buildDurationChip(context, '30 Menit', 30, selectedMinutes == 30, (dt) {
+                            setState(() {
+                              isClosedTemporarily = true;
+                              closedUntil = dt;
+                              selectedMinutes = 30;
+                            });
+                          }),
+                          _buildDurationChip(context, '1 Jam', 60, selectedMinutes == 60, (dt) {
+                            setState(() {
+                              isClosedTemporarily = true;
+                              closedUntil = dt;
+                              selectedMinutes = 60;
+                            });
+                          }),
+                          _buildDurationChip(context, '2 Jam', 120, selectedMinutes == 120, (dt) {
+                            setState(() {
+                              isClosedTemporarily = true;
+                              closedUntil = dt;
+                              selectedMinutes = 120;
+                            });
+                          }),
+                          ChoiceChip(
+                            label: Text(
+                              'Custom',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: selectedMinutes == -1 ? Colors.white : AppColors.textDark,
+                                fontWeight: selectedMinutes == -1 ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                            selected: selectedMinutes == -1,
+                            selectedColor: AppColors.primary,
+                            backgroundColor: Colors.white,
+                            checkmarkColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: selectedMinutes == -1 ? AppColors.primary : Colors.grey[300]!,
+                                width: 1,
+                              ),
+                            ),
+                            onSelected: (val) async {
+                              if (val) {
+                                final TimeOfDay? pickedTime = await showTimePicker(
+                                  context: context,
+                                  initialTime: TimeOfDay.now(),
+                                );
+                                if (pickedTime != null) {
+                                  final now = DateTime.now();
+                                  var targetDateTime = DateTime(
+                                    now.year,
+                                    now.month,
+                                    now.day,
+                                    pickedTime.hour,
+                                    pickedTime.minute,
+                                  );
+                                  if (targetDateTime.isBefore(now)) {
+                                    targetDateTime = targetDateTime.add(const Duration(days: 1));
+                                  }
+                                  setState(() {
+                                    isClosedTemporarily = true;
+                                    closedUntil = targetDateTime;
+                                    selectedMinutes = -1;
+                                  });
+                                }
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 12),
+            const Text(
+              'Operation Time',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSettingField('Opening Time', '09:00'),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildSettingField('Closing Time', '22:00'),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(widget.sheetCtx),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: GradientButton(
+                    onPressed: () async {
+                      // Save to Firestore settings
+                      try {
+                        await FirebaseFirestore.instance.collection('settings').doc('store').set({
+                          'restaurantName': nameController.text.trim(),
+                          'logoUrl': logoController.text.trim(),
+                          'isShopOpen': isShopOpen,
+                          'isClosedTemporarily': isClosedTemporarily,
+                          'closedUntil': closedUntil?.toIso8601String(),
+                        }, SetOptions(merge: true));
+
+                        if (context.mounted) {
+                          Navigator.pop(widget.sheetCtx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Settings saved successfully!')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to save settings: $e'), backgroundColor: AppColors.error),
+                          );
+                        }
+                      }
+                    },
+                    borderRadius: 12,
+                    child: const Text(
+                      'Save Changes',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 Widget _buildDurationChip(
   BuildContext context,
   String label,
   int minutes,
-  StateSetter setState,
+  bool isSelected,
   void Function(DateTime) onSelect,
 ) {
-  return ActionChip(
-    label: Text(label, style: const TextStyle(fontSize: 12)),
-    onPressed: () {
-      final targetTime = DateTime.now().add(Duration(minutes: minutes));
-      onSelect(targetTime);
+  return ChoiceChip(
+    label: Text(
+      label, 
+      style: TextStyle(
+        fontSize: 12,
+        color: isSelected ? Colors.white : AppColors.textDark,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+    ),
+    selected: isSelected,
+    selectedColor: AppColors.primary,
+    backgroundColor: Colors.white,
+    checkmarkColor: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+      side: BorderSide(
+        color: isSelected ? AppColors.primary : Colors.grey[300]!,
+        width: 1,
+      ),
+    ),
+    onSelected: (val) {
+      if (val) {
+        final targetTime = DateTime.now().add(Duration(minutes: minutes));
+        onSelect(targetTime);
+      }
     },
   );
 }

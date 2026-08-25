@@ -19,7 +19,8 @@ class AdminMenuListPage extends StatefulWidget {
 class _AdminMenuListPageState extends State<AdminMenuListPage> {
   late final AdminMenuCubit _cubit;
   final TextEditingController _searchController = TextEditingController();
-  bool _isGridView = true;
+  bool _isReordering = false;
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
@@ -46,40 +47,33 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/admin/menu/add'),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Add Menu',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: BlocConsumer<AdminMenuCubit, AdminMenuState>(
-        listener: (context, state) {
-          if (state is AdminMenuLoaded) {
-            if (state.actionSuccessMessage != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.actionSuccessMessage!),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              _cubit.clearMessages();
-            }
-            if (state.actionErrorMessage != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.actionErrorMessage!),
-                  backgroundColor: AppColors.error,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              _cubit.clearMessages();
-            }
-          }
-        },
+      body: Stack(
+        children: [
+          BlocConsumer<AdminMenuCubit, AdminMenuState>(
+            listener: (context, state) {
+              if (state is AdminMenuLoaded) {
+                if (state.actionSuccessMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.actionSuccessMessage!),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  _cubit.clearMessages();
+                }
+                if (state.actionErrorMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.actionErrorMessage!),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  _cubit.clearMessages();
+                }
+              }
+            },
         builder: (context, state) {
           if (state is AdminMenuLoading) {
             return _buildSkeletonLoader(context);
@@ -120,35 +114,99 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Subtitle Header Row
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Manage your menu, pricing, availability and stock.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedTabIndex == 0
+                                  ? 'Manage your menu, pricing, availability and stock.'
+                                  : _selectedTabIndex == 1
+                                      ? 'Manage categories for sorting and grouping dishes.'
+                                      : 'Define variants and options (e.g. Size, Toppings) that apply to dishes.',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          InkWell(
+                            onTap: () {
+                              if (_selectedTabIndex == 0) {
+                                context.go('/admin/menu/add');
+                              } else if (_selectedTabIndex == 1) {
+                                _showAddCategoryDialog(context);
+                              } else {
+                                _showVariantFormDialog(context);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: AppColors.primaryGradient,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.2),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.add, color: Colors.white, size: 16),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _selectedTabIndex == 0
+                                        ? 'Add Menu'
+                                        : _selectedTabIndex == 1
+                                            ? 'Add Category'
+                                            : 'Add Variant',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 20),
 
-                      // Action Bar (Search & Add Menu Button)
-                      _buildActionBar(context, state, isMobile),
-                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          _buildTabButton('Items', 0),
+                          const SizedBox(width: 12),
+                          _buildTabButton('Categories', 1),
+                          const SizedBox(width: 12),
+                          _buildTabButton('Variants', 2),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
 
-                      // Smart Filters
-                      _buildFilterRow(state, isMobile),
-                      const SizedBox(height: 24),
+                      if (_selectedTabIndex == 0) ...[
+                        _buildActionBar(context, state, isMobile),
+                        const SizedBox(height: 16),
 
-                      // Grid vs List view toggle content
-                      filteredItems.isEmpty
-                          ? _buildEmptyState()
-                          : (_isGridView
-                                ? _buildGridView(filteredItems, state)
-                                : _buildListView(filteredItems, state)),
+                        filteredItems.isEmpty
+                            ? _buildEmptyState()
+                            : _buildListView(filteredItems, state),
+                      ] else if (_selectedTabIndex == 1) ...[
+                        _buildCategoryTab(state, isMobile),
+                      ] else if (_selectedTabIndex == 2) ...[
+                        _buildVariantTab(state, isMobile),
+                      ],
                     ],
                   ),
                 );
@@ -158,8 +216,19 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
           return const SizedBox.shrink();
         },
       ),
-    );
-  }
+      if (_isReordering)
+        Container(
+          color: Colors.white,
+          child: const Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+    ],
+  ),
+);
+}
 
   Widget _buildSkeletonLoader(BuildContext context) {
     return LayoutBuilder(
@@ -235,28 +304,28 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: isSelected ? Colors.white : AppColors.textDark,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected ? AppColors.primaryGradient : null,
+          color: isSelected ? null : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : Colors.grey[200]!,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : AppColors.textDark,
+          ),
         ),
       ),
-      selected: isSelected,
-      onSelected: (_) => onTap(),
-      selectedColor: AppColors.primary,
-      backgroundColor: Colors.grey[100],
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? AppColors.primary : AppColors.border,
-          width: 1,
-        ),
-      ),
-      showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     );
   }
 
@@ -291,44 +360,6 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
     );
   }
 
-  void _showAddCategoryDialog(BuildContext context) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add New Category'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter category name...',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                _cubit.addCategory(name);
-                Navigator.pop(dialogCtx);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Add Category'),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildCategoryChips(AdminMenuLoaded state) {
     return SingleChildScrollView(
@@ -498,40 +529,11 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
       ),
     );
 
-    final viewToggle = Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.all(2),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildViewToggleButton(
-            icon: Icons.grid_view,
-            isSelected: _isGridView,
-            onTap: () => setState(() => _isGridView = true),
-          ),
-          _buildViewToggleButton(
-            icon: Icons.list,
-            isSelected: !_isGridView,
-            onTap: () => setState(() => _isGridView = false),
-          ),
-        ],
-      ),
-    );
-
     if (isMobile) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(child: searchBar),
-              const SizedBox(width: 8),
-              viewToggle,
-            ],
-          ),
+          searchBar,
           const SizedBox(height: 12),
           _buildCategoryChips(state),
           const SizedBox(height: 12),
@@ -553,8 +555,6 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
         Row(
           children: [
             searchBar,
-            const SizedBox(width: 12),
-            viewToggle,
             const SizedBox(width: 16),
             Container(width: 1, height: 24, color: AppColors.border),
             const SizedBox(width: 16),
@@ -591,243 +591,65 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
     );
   }
 
-  Widget _buildViewToggleButton({
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Icon(
-          icon,
-          size: 16,
-          color: isSelected ? AppColors.textDark : AppColors.textSecondary,
-        ),
-      ),
-    );
-  }
+  Future<void> _onReorder(int oldIndex, int newIndex, List<MenuItem> filteredItems, AdminMenuLoaded state) async {
+    final List<MenuItem> reorderedFiltered = List.from(filteredItems);
+    
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    if (oldIndex == newIndex) return;
 
-  Widget _buildFilterRow(AdminMenuLoaded state, bool isMobile) {
-    // This helper is kept empty since filters are now inline inside _buildActionBar
-    return const SizedBox.shrink();
-  }
+    final MenuItem movedItem = reorderedFiltered.removeAt(oldIndex);
+    reorderedFiltered.insert(newIndex, movedItem);
 
-  Widget _buildGridView(List<MenuItem> items, AdminMenuLoaded state) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int cols = 3;
-        if (constraints.maxWidth < 650) {
-          cols = 1;
-        } else if (constraints.maxWidth < 950) {
-          cols = 2;
-        }
+    final List<MenuItem> allItems = List.from(state.menuItems);
+    final Set<String> filteredIds = filteredItems.map((item) => item.id).toSet();
 
-        final double spacing = 16.0;
-        final double totalSpacing = spacing * (cols - 1);
-        final double cardWidth = (constraints.maxWidth - totalSpacing) / cols;
+    int filteredPointer = 0;
+    for (int i = 0; i < allItems.length; i++) {
+      if (filteredIds.contains(allItems[i].id)) {
+        allItems[i] = reorderedFiltered[filteredPointer];
+        filteredPointer++;
+      }
+    }
 
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: items.map((item) {
-            return SizedBox(
-              width: cardWidth,
-              child: _buildMenuGridCard(item, state),
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
+    setState(() {
+      _isReordering = true;
+    });
 
-  Widget _buildMenuGridCard(MenuItem item, AdminMenuLoaded state) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey[200]!, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Large Food Image with Category badge
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                child: Image.network(
-                  item.imageUrl,
-                  height: 130,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 130,
-                    width: double.infinity,
-                    color: AppColors.primarySoft,
-                    child: const Icon(
-                      Icons.restaurant,
-                      size: 36,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                left: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.65),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    _getCategoryName(item.categoryId, state.categories),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: AppColors.textDark,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      CurrencyFormatter.format(item.price),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Card Footer actions (Switches & Edit/Delete Buttons)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Visibility Switch
-                    Row(
-                      children: [
-                        Text(
-                          item.isActive ? 'Active' : 'Inactive',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: item.isActive
-                                ? AppColors.success
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _buildMinimalistSwitch(
-                          value: item.isActive,
-                          onChanged: (_) => _cubit.toggleMenuStatus(item.id),
-                        ),
-                      ],
-                    ),
-                    // Action buttons: Edit & Delete
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.edit_outlined,
-                            color: Colors.blue,
-                            size: 16,
-                          ),
-                          onPressed: () => context.go(
-                            '/admin/menu/edit/${item.id}',
-                            extra: item,
-                          ),
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.blue.withOpacity(0.05),
-                            padding: const EdgeInsets.all(6),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: AppColors.error,
-                            size: 16,
-                          ),
-                          onPressed: () =>
-                              _showDeleteConfirmDialog(context, item),
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppColors.error.withOpacity(0.05),
-                            padding: const EdgeInsets.all(6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    try {
+      await _cubit.reorderMenuItems(allItems);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isReordering = false;
+        });
+      }
+    }
   }
 
   Widget _buildListView(List<MenuItem> items, AdminMenuLoaded state) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 650;
+        final bool canDrag = state.sortBy == 'Custom';
 
-        return Column(
+        return ReorderableListView(
+          buildDefaultDragHandles: false,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          onReorder: (oldIdx, newIdx) => _onReorder(oldIdx, newIdx, items, state),
           children: items.map((item) {
             final categoryName = _getCategoryName(
               item.categoryId,
               state.categories,
             );
 
+            final int itemIndex = items.indexOf(item);
+
             if (isMobile) {
               return Container(
+                key: ValueKey(item.id),
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -846,6 +668,17 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                   children: [
                     Row(
                       children: [
+                        if (canDrag) ...[
+                          ReorderableDragStartListener(
+                            index: itemIndex,
+                            child: const Icon(
+                              Icons.drag_indicator,
+                              color: AppColors.textSecondary,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: Image.network(
@@ -980,6 +813,7 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
 
             // Desktop layout (Horizontal Row)
             return Container(
+              key: ValueKey(item.id),
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -996,6 +830,20 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
+                  if (canDrag) ...[
+                    ReorderableDragStartListener(
+                      index: itemIndex,
+                      child: const MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: Icon(
+                          Icons.drag_indicator,
+                          color: AppColors.textSecondary,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.network(
@@ -1155,6 +1003,635 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton(String label, int index) {
+    final isSelected = _selectedTabIndex == index;
+    return InkWell(
+      onTap: () => setState(() => _selectedTabIndex = index),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? null : Colors.grey[100],
+          gradient: isSelected ? AppColors.primaryGradient : null,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : Colors.grey[200]!,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryTab(AdminMenuLoaded state, bool isMobile) {
+    final categories = state.categories;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
+      ),
+      child: ReorderableListView(
+        buildDefaultDragHandles: false,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        onReorder: (oldIdx, newIdx) => _onCategoryReorder(oldIdx, newIdx, categories),
+        children: categories.asMap().entries.map((entry) {
+          final index = entry.key;
+          final category = entry.value;
+
+          return Container(
+            key: ValueKey(category.id),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: index == categories.length - 1
+                      ? Colors.transparent
+                      : Colors.grey[100]!,
+                ),
+              ),
+            ),
+            child: ListTile(
+              leading: ReorderableDragStartListener(
+                index: index,
+                child: const MouseRegion(
+                  cursor: SystemMouseCursors.grab,
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Icon(
+                      Icons.drag_indicator,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                category.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      color: Colors.blue,
+                      size: 18,
+                    ),
+                    onPressed: () => _showEditCategoryDialog(context, category),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: AppColors.error,
+                      size: 18,
+                    ),
+                    onPressed: () => _showDeleteCategoryConfirmDialog(context, category),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildVariantTab(AdminMenuLoaded state, bool isMobile) {
+    final variants = state.variants;
+    if (variants.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(48.0),
+          child: Text(
+            'No global variants created yet.',
+            style: TextStyle(color: Colors.grey[400], fontSize: 14),
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: variants.length,
+      itemBuilder: (context, index) {
+        final variant = variants[index];
+        final optionsString = variant.options
+            .map((o) => '${o.name} (+Rp ${o.additionalPrice.toInt()})')
+            .join(', ');
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey[200]!, width: 1),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            title: Row(
+              children: [
+                Text(
+                  variant.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: variant.isRequired ? Colors.red[50] : Colors.blue[50],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    variant.isRequired ? 'Required' : 'Optional',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: variant.isRequired ? Colors.red[700] : Colors.blue[700],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                'Options: $optionsString',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: Colors.blue,
+                    size: 18,
+                  ),
+                  onPressed: () => _showVariantFormDialog(context, existingVariant: variant),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.error,
+                    size: 18,
+                  ),
+                  onPressed: () => _showDeleteVariantConfirmDialog(context, variant),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _onCategoryReorder(int oldIndex, int newIndex, List<MenuCategory> categories) async {
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    if (oldIndex == newIndex) return;
+
+    final List<MenuCategory> allCategories = List.from(categories);
+    final moved = allCategories.removeAt(oldIndex);
+    allCategories.insert(newIndex, moved);
+
+    setState(() {
+      _isReordering = true;
+    });
+
+    try {
+      await _cubit.reorderCategories(allCategories);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isReordering = false;
+        });
+      }
+    }
+  }
+
+  void _showAddCategoryDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Add New Category'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Enter category name...',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                _cubit.addCategory(name);
+                Navigator.pop(dialogCtx);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Add', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditCategoryDialog(BuildContext context, MenuCategory category) {
+    final controller = TextEditingController(text: category.name);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Edit Category'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Enter category name...',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                _cubit.editCategory(category.id, name);
+                Navigator.pop(dialogCtx);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteCategoryConfirmDialog(BuildContext context, MenuCategory category) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Delete Category'),
+        content: Text('Are you sure you want to delete "${category.name}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _cubit.deleteCategory(category.id);
+              Navigator.pop(dialogCtx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showVariantFormDialog(BuildContext context, {MenuVariant? existingVariant}) {
+    final isEdit = existingVariant != null;
+    final nameController = TextEditingController(text: existingVariant?.name ?? '');
+    bool isRequired = existingVariant?.isRequired ?? false;
+
+    int minSelections = existingVariant?.minSelections ?? (isRequired ? 1 : 0);
+    int maxSelections = existingVariant?.maxSelections ?? 0;
+
+    final List<Map<String, dynamic>> optionsData = [];
+    if (isEdit) {
+      for (final option in existingVariant.options) {
+        optionsData.add({
+          'id': option.id,
+          'name': TextEditingController(text: option.name),
+          'price': TextEditingController(text: option.additionalPrice.toInt().toString()),
+        });
+      }
+    } else {
+      optionsData.add({
+        'id': 'opt_${DateTime.now().millisecondsSinceEpoch}_0',
+        'name': TextEditingController(),
+        'price': TextEditingController(text: '0'),
+      });
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final int optionsCount = optionsData.length;
+            if (maxSelections > optionsCount) {
+              maxSelections = optionsCount;
+            }
+            if (minSelections > optionsCount) {
+              minSelections = optionsCount;
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(isEdit ? 'Edit Global Variant' : 'Add New Global Variant'),
+              content: SizedBox(
+                width: 450,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Variant Name *',
+                          hintText: 'e.g. Size, Spicy Level, Milk Option',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      CheckboxListTile(
+                        title: const Text('Is Required selection?'),
+                        subtitle: const Text('Customers must pick an option to order'),
+                        value: isRequired,
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() {
+                              isRequired = val;
+                              minSelections = val ? 1 : 0;
+                            });
+                          }
+                        },
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                      const Divider(color: AppColors.border, height: 24),
+                      const SizedBox(height: 8),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Options & Extra Price',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              setDialogState(() {
+                                optionsData.add({
+                                  'id': 'opt_${DateTime.now().millisecondsSinceEpoch}_${optionsData.length}',
+                                  'name': TextEditingController(),
+                                  'price': TextEditingController(text: '0'),
+                                });
+                              });
+                            },
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text('Add Option'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ...optionsData.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final data = entry.value;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: TextField(
+                                  controller: data['name'] as TextEditingController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Option (e.g. Medium)',
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                flex: 2,
+                                child: TextField(
+                                  controller: data['price'] as TextEditingController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    hintText: '+ Price',
+                                    prefixText: 'Rp ',
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                ),
+                              ),
+                              if (optionsData.length > 1) ...[
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      optionsData.removeAt(idx);
+                                    });
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      }),
+
+                      const Divider(color: AppColors.border, height: 24),
+                      const SizedBox(height: 8),
+
+                      const Text(
+                        'Selection Rules',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<int>(
+                              value: minSelections,
+                              decoration: const InputDecoration(
+                                labelText: 'Min Selections',
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              ),
+                              items: List.generate(optionsCount + 1, (i) => i)
+                                  .map((val) => DropdownMenuItem<int>(
+                                        value: val,
+                                        child: Text(val.toString()),
+                                      ))
+                                  .toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setDialogState(() {
+                                    minSelections = val;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<int>(
+                              value: maxSelections,
+                              decoration: const InputDecoration(
+                                labelText: 'Max Selections',
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              ),
+                              items: List.generate(optionsCount + 1, (i) => i)
+                                  .map((val) => DropdownMenuItem<int>(
+                                        value: val,
+                                        child: Text(val.toString()),
+                                      ))
+                                  .toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setDialogState(() {
+                                    maxSelections = val;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final variantName = nameController.text.trim();
+                    if (variantName.isEmpty) return;
+
+                    final List<VariantOption> finalOptions = [];
+                    for (final optData in optionsData) {
+                      final optName = (optData['name'] as TextEditingController).text.trim();
+                      final optPriceStr = (optData['price'] as TextEditingController).text.trim();
+                      final optPrice = double.tryParse(optPriceStr) ?? 0.0;
+
+                      if (optName.isNotEmpty) {
+                        finalOptions.add(VariantOption(
+                          id: optData['id'] as String,
+                          name: optName,
+                          additionalPrice: optPrice,
+                        ));
+                      }
+                    }
+
+                    if (finalOptions.isEmpty) return;
+
+                    final MenuVariant newVariant = MenuVariant(
+                      id: existingVariant?.id ?? 'var_${DateTime.now().millisecondsSinceEpoch}',
+                      name: variantName,
+                      isRequired: isRequired,
+                      options: finalOptions,
+                      minSelections: minSelections,
+                      maxSelections: maxSelections,
+                    );
+
+                    if (isEdit) {
+                      _cubit.editVariant(newVariant);
+                    } else {
+                      _cubit.addVariant(newVariant);
+                    }
+                    Navigator.pop(dialogCtx);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: Text(isEdit ? 'Save Changes' : 'Create Variant', style: const TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showDeleteVariantConfirmDialog(BuildContext context, MenuVariant variant) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Delete Global Variant'),
+        content: Text('Are you sure you want to delete "${variant.name}"? Dishes referencing this variant will no longer display it.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _cubit.deleteVariant(variant.id);
+              Navigator.pop(dialogCtx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

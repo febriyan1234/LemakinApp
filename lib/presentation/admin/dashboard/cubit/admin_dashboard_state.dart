@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../../domain/entities/order.dart';
 
 class BestSellerItem extends Equatable {
   final String menuName;
@@ -52,6 +53,7 @@ class AdminDashboardLoaded extends AdminDashboardState {
   final int inactiveMenus;
   final List<BestSellerItem> bestSellers;
   final List<SalesChartData> chartDataList;
+  final List<OrderEntity> recentOrders;
   final String selectedPeriod;
   final DateTime? startDate;
   final DateTime? endDate;
@@ -65,6 +67,7 @@ class AdminDashboardLoaded extends AdminDashboardState {
     required this.inactiveMenus,
     required this.bestSellers,
     required this.chartDataList,
+    required this.recentOrders,
     required this.selectedPeriod,
     this.startDate,
     this.endDate,
@@ -79,6 +82,7 @@ class AdminDashboardLoaded extends AdminDashboardState {
     int? inactiveMenus,
     List<BestSellerItem>? bestSellers,
     List<SalesChartData>? chartDataList,
+    List<OrderEntity>? recentOrders,
     String? selectedPeriod,
     DateTime? startDate,
     DateTime? endDate,
@@ -92,6 +96,7 @@ class AdminDashboardLoaded extends AdminDashboardState {
       inactiveMenus: inactiveMenus ?? this.inactiveMenus,
       bestSellers: bestSellers ?? this.bestSellers,
       chartDataList: chartDataList ?? this.chartDataList,
+      recentOrders: recentOrders ?? this.recentOrders,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
@@ -108,6 +113,7 @@ class AdminDashboardLoaded extends AdminDashboardState {
         inactiveMenus,
         bestSellers,
         chartDataList,
+        recentOrders,
         selectedPeriod,
         startDate,
         endDate,

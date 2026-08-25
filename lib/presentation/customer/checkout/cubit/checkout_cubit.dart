@@ -68,7 +68,7 @@ class CheckoutCubit extends Cubit<CheckoutState> {
 
       await createOrderUseCase.execute(order);
 
-      cartCubit.clearCart();
+      await cartCubit.clearCart();
 
       emit(CheckoutSuccess(order));
     } catch (e) {

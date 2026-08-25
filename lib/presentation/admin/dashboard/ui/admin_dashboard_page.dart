@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:go_router/go_router.dart';
+import 'package:lemakin_app/domain/entities/order.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/widgets/skeletal_loader.dart';
@@ -134,15 +135,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Good morning, Admin 👋',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textDark,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
                                   "Here's what's happening with your business today.",
                                   style: TextStyle(
                                     fontSize: 12,
@@ -192,167 +184,71 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       const SizedBox(height: 32),
 
                       // Central Charts Section
-                      LayoutBuilder(
-                        builder: (context, chartConstraints) {
-                          final isCompact = chartConstraints.maxWidth < 900;
-
-                          final chartCard = Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: const BorderSide(
-                                color: AppColors.border,
-                                width: 1,
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                      Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: const BorderSide(
+                            color: AppColors.border,
+                            width: 1,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: const [
-                                          Text(
-                                            'Sales Overview',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.textDark,
-                                            ),
-                                          ),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            'Track your sales performance over time',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: AppColors.textSecondary,
-                                            ),
-                                          ),
-                                        ],
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: const [
+                                      Text(
+                                        'Sales Overview',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textDark,
+                                        ),
                                       ),
-                                      Row(
-                                        children: [
-                                          _buildLegendIndicator(
-                                            'Sales',
-                                            AppColors.primary,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          _buildLegendIndicator(
-                                            'Income',
-                                            AppColors.success,
-                                          ),
-                                        ],
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Track your sales performance over time',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textSecondary,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 24),
-                                  SizedBox(
-                                    height: 280,
-                                    child: _AreaChart(
-                                      data: state.chartDataList,
-                                    ),
+                                  Row(
+                                    children: [
+                                      _buildLegendIndicator(
+                                        'Sales',
+                                        AppColors.primary,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      _buildLegendIndicator(
+                                        'Income',
+                                        AppColors.success,
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ),
-                          );
-
-                          final financialSummaryCard = Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: const BorderSide(
-                                color: AppColors.border,
-                                width: 1,
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                height: 280,
+                                child: _AreaChart(
+                                  data: state.chartDataList,
+                                ),
                               ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Financial Overview',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textDark,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const Text(
-                                    'Relationship between revenue, expenses and profit',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 28),
-                                  _buildFinancialRow(
-                                    'Total Revenue',
-                                    state.todaySales,
-                                    AppColors.primaryGradient,
-                                    1.0,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildFinancialRow(
-                                    'Total Expenses',
-                                    state.todayExpenses,
-                                    const LinearGradient(
-                                      colors: [Color(0xFFE57373), Color(0xFFEF5350)],
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                    ),
-                                    state.todaySales > 0
-                                        ? (state.todayExpenses /
-                                                  state.todaySales)
-                                              .clamp(0.0, 1.0)
-                                        : 0.15,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildFinancialRow(
-                                    'Net Income',
-                                    state.todayIncome,
-                                    const LinearGradient(
-                                      colors: [Color(0xFF81C784), Color(0xFF4CAF50)],
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                    ),
-                                    state.todaySales > 0
-                                        ? (state.todayIncome / state.todaySales)
-                                              .clamp(0.0, 1.0)
-                                        : 0.85,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-
-                          if (isCompact) {
-                            return Column(
-                              children: [
-                                chartCard,
-                                const SizedBox(height: 24),
-                                financialSummaryCard,
-                              ],
-                            );
-                          }
-
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(flex: 3, child: chartCard),
-                              const SizedBox(width: 24),
-                              Expanded(flex: 2, child: financialSummaryCard),
                             ],
-                          );
-                        },
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 32),
 
@@ -458,7 +354,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                     ],
                                   ),
                                   const SizedBox(height: 16),
-                                  _buildRecentTransactionsList(),
+                                  _buildRecentTransactionsList(state.recentOrders),
                                 ],
                               ),
                             ),
@@ -550,17 +446,36 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               const SizedBox(height: 24),
               LayoutBuilder(
                 builder: (context, gridConstraints) {
-                  final cols = gridConstraints.maxWidth < 600
-                      ? 1
-                      : (gridConstraints.maxWidth < 1000 ? 2 : 4);
-                  return GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: cols,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: cols == 1 ? 3.2 : 1.6,
-                    children: List.generate(4, (_) => SkeletalLoader.card()),
+                  final double width = gridConstraints.maxWidth;
+                  final double spacing = width < 600 ? 12 : 16;
+
+                  Widget buildCardSkeleton() => const SkeletalLoader(
+                        width: double.infinity,
+                        height: 125,
+                        borderRadius: 16,
+                      );
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: buildCardSkeleton()),
+                          SizedBox(width: spacing),
+                          Expanded(child: buildCardSkeleton()),
+                        ],
+                      ),
+                      SizedBox(height: spacing),
+                      Row(
+                        children: [
+                          Expanded(child: buildCardSkeleton()),
+                          SizedBox(width: spacing),
+                          Expanded(child: buildCardSkeleton()),
+                        ],
+                      ),
+                      SizedBox(height: spacing),
+                      buildCardSkeleton(),
+                    ],
                   );
                 },
               ),
@@ -569,6 +484,41 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 width: double.infinity,
                 height: 320,
                 borderRadius: 16,
+              ),
+              const SizedBox(height: 32),
+              LayoutBuilder(
+                builder: (context, secondRowConstraints) {
+                  final isCompact = secondRowConstraints.maxWidth < 900;
+
+                  const bestSellersSkeleton = SkeletalLoader(
+                    width: double.infinity,
+                    height: 280,
+                    borderRadius: 16,
+                  );
+                  const recentTrxSkeleton = SkeletalLoader(
+                    width: double.infinity,
+                    height: 280,
+                    borderRadius: 16,
+                  );
+
+                  if (isCompact) {
+                    return Column(
+                      children: const [
+                        bestSellersSkeleton,
+                        SizedBox(height: 24),
+                        recentTrxSkeleton,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: const [
+                      Expanded(child: bestSellersSkeleton),
+                      SizedBox(width: 24),
+                      Expanded(child: recentTrxSkeleton),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -642,63 +592,80 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Widget _buildKPICards(AdminDashboardLoaded state) {
+    final double netProfit = state.todayIncome - state.todayExpenses;
+
+    final cardRevenue = _buildKPICard(
+      title: 'Total Revenue',
+      value: CurrencyFormatter.format(state.todaySales),
+      growth: '+12.5%',
+      vsPeriod: 'vs last period',
+      isPositive: true,
+      sparkValues: [1.2, 1.4, 1.3, 1.6, 1.5, 1.7, 2.0],
+      sparkColor: AppColors.primary,
+    );
+    final cardOrders = _buildKPICard(
+      title: 'Total Orders',
+      value: '${state.totalTransactions}',
+      growth: '+8.2%',
+      vsPeriod: 'vs last period',
+      isPositive: true,
+      sparkValues: [80.0, 95.0, 85.0, 110.0, 105.0, 120.0, 128.0],
+      sparkColor: Colors.blue,
+    );
+    final cardExpenses = _buildKPICard(
+      title: 'Total Expenses',
+      value: CurrencyFormatter.format(state.todayExpenses),
+      growth: '-3.4%',
+      vsPeriod: 'vs last period',
+      isPositive: false,
+      sparkValues: [4.8, 5.2, 4.0, 4.2, 3.8, 4.0, 3.4],
+      sparkColor: Colors.red,
+    );
+    final cardLaba40 = _buildKPICard(
+      title: 'Laba Bersih (40%)',
+      value: CurrencyFormatter.format(state.todayIncome * 0.40),
+      growth: '+15.8%',
+      vsPeriod: 'vs last period',
+      isPositive: true,
+      sparkValues: [0.8, 1.0, 0.9, 1.2, 1.1, 1.3, 1.68],
+      sparkColor: Colors.teal,
+    );
+    final cardLabaDiff = _buildKPICard(
+      title: 'Laba Bersih',
+      subtitle: '(Revenue - Expenses)',
+      value: CurrencyFormatter.format(netProfit),
+      growth: netProfit >= 0 ? '+11.2%' : '-15.4%',
+      vsPeriod: 'vs last period',
+      isPositive: netProfit >= 0,
+      sparkValues: [0.5, 0.8, 0.7, 0.9, 0.8, 1.0, 1.2],
+      sparkColor: Colors.indigo,
+    );
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final double width = constraints.maxWidth;
-        int crossAxisCount = 4;
-        if (width < 600) {
-          crossAxisCount = 1;
-        } else if (width < 1000) {
-          crossAxisCount = 2;
-        }
-        final double aspect = width < 600 ? 3.0 : 1.7;
+        final double spacing = width < 600 ? 12 : 16;
 
-        return GridView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: aspect,
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildKPICard(
-              title: 'Total Revenue',
-              value: CurrencyFormatter.format(state.todaySales),
-              growth: '+12.5%',
-              vsPeriod: 'vs last period',
-              isPositive: true,
-              sparkValues: [1.2, 1.4, 1.3, 1.6, 1.5, 1.7, 2.0],
-              sparkColor: AppColors.primary,
+            Row(
+              children: [
+                Expanded(child: cardRevenue),
+                SizedBox(width: spacing),
+                Expanded(child: cardOrders),
+              ],
             ),
-            _buildKPICard(
-              title: 'Total Orders',
-              value: '${state.totalTransactions}',
-              growth: '+8.2%',
-              vsPeriod: 'vs last period',
-              isPositive: true,
-              sparkValues: [80.0, 95.0, 85.0, 110.0, 105.0, 120.0, 128.0],
-              sparkColor: Colors.blue,
+            SizedBox(height: spacing),
+            Row(
+              children: [
+                Expanded(child: cardExpenses),
+                SizedBox(width: spacing),
+                Expanded(child: cardLabaDiff),
+              ],
             ),
-            _buildKPICard(
-              title: 'Total Expenses',
-              value: CurrencyFormatter.format(state.todayExpenses),
-              growth: '-3.4%',
-              vsPeriod: 'vs last period',
-              isPositive: false,
-              sparkValues: [4.8, 5.2, 4.0, 4.2, 3.8, 4.0, 3.4],
-              sparkColor: AppColors.error,
-            ),
-            _buildKPICard(
-              title: 'Net Income',
-              value: CurrencyFormatter.format(state.todayIncome),
-              growth: '+15.8%',
-              vsPeriod: 'vs last period',
-              isPositive: true,
-              sparkValues: [0.8, 1.0, 0.9, 1.2, 1.1, 1.3, 1.68],
-              sparkColor: AppColors.success,
-            ),
+            SizedBox(height: spacing),
+            cardLaba40,
           ],
         );
       },
@@ -707,6 +674,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   Widget _buildKPICard({
     required String title,
+    String? subtitle,
     required String value,
     required String growth,
     required String vsPeriod,
@@ -722,75 +690,89 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppColors.border, width: 1),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(
-                        growth,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: growthColor,
-                        ),
+      child: SizedBox(
+        height: 125,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          vsPeriod,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textSecondary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 7,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Mini Sparkline Graph
-            SizedBox(
-              width: 50,
-              height: 35,
-              child: CustomPaint(
-                painter: _SparklinePainter(
-                  values: sparkValues,
-                  color: sparkColor,
+                    const SizedBox(height: 8),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          growth,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: growthColor,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            vsPeriod,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              // Mini Sparkline Graph
+              SizedBox(
+                width: 50,
+                height: 35,
+                child: CustomPaint(
+                  painter: _SparklinePainter(
+                    values: sparkValues,
+                    color: sparkColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -817,64 +799,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  Widget _buildFinancialRow(
-    String name,
-    double amount,
-    Gradient gradient,
-    double percentage,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              name,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textDark,
-              ),
-            ),
-            Text(
-              CurrencyFormatter.format(amount),
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Stack(
-          children: [
-            Container(
-              height: 8,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[200]!,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return Container(
-                  height: 8,
-                  width: constraints.maxWidth * percentage,
-                  decoration: BoxDecoration(
-                    gradient: gradient,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildBestSellersList(List<BestSellerItem> bestSellers) {
     return ListView.separated(
@@ -1003,45 +928,31 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  Widget _buildRecentTransactionsList() {
-    final List<Map<String, dynamic>> mockTrx = [
-      {
-        'id': '#TRX-10284',
-        'time': 'Today, 14:32',
-        'amount': 125000.0,
-        'method': 'QRIS',
-        'status': 'Paid',
-      },
-      {
-        'id': '#TRX-10283',
-        'time': 'Today, 11:15',
-        'amount': 75000.0,
-        'method': 'Cash',
-        'status': 'Paid',
-      },
-      {
-        'id': '#TRX-10282',
-        'time': 'Yesterday, 19:40',
-        'amount': 195000.0,
-        'method': 'QRIS',
-        'status': 'Paid',
-      },
-      {
-        'id': '#TRX-10281',
-        'time': 'Yesterday, 17:10',
-        'amount': 45000.0,
-        'method': 'Cash',
-        'status': 'Paid',
-      },
-    ];
+  Widget _buildRecentTransactionsList(List<OrderEntity> recentOrders) {
+    if (recentOrders.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40.0),
+        child: Center(
+          child: Text(
+            'No transactions in this period',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      );
+    }
 
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: mockTrx.length,
+      itemCount: recentOrders.length,
       separatorBuilder: (_, __) => const Divider(height: 20, color: AppColors.border),
       itemBuilder: (context, index) {
-        final trx = mockTrx[index];
+        final trx = recentOrders[index];
+
+        final String timeLabel = DateFormat('d MMM, HH:mm').format(trx.createdAt);
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1050,16 +961,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  trx['id'],
+                  '#${trx.id.toUpperCase()}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                    fontSize: 11,
                     color: AppColors.textDark,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  trx['time'],
+                  timeLabel,
                   style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textSecondary,
@@ -1073,7 +984,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      CurrencyFormatter.format(trx['amount']),
+                      CurrencyFormatter.format(trx.total),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -1082,7 +993,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      trx['method'],
+                      trx.paymentMethod,
                       style: const TextStyle(
                         fontSize: 10,
                         color: AppColors.textSecondary,
@@ -1098,15 +1009,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.12),
+                    color: (trx.status.toLowerCase() == 'success'
+                            ? AppColors.success
+                            : AppColors.error)
+                        .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    'Paid',
+                  child: Text(
+                    trx.status,
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.success,
+                      color: trx.status.toLowerCase() == 'success'
+                          ? AppColors.success
+                          : AppColors.error,
                     ),
                   ),
                 ),

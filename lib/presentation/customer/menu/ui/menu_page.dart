@@ -113,117 +113,127 @@ class _MenuPageState extends State<MenuPage> {
                           slivers: [
                             // 1. Banner Carousel with overlapping logo & status (scrolls away)
                             SliverToBoxAdapter(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  // Banner Carousel with overlapping logo
-                                  Stack(
-                                    clipBehavior: Clip.none,
-                                    alignment: Alignment.bottomCenter,
+                              child: StreamBuilder<DocumentSnapshot>(
+                                stream: StoreStatusHelper.stream,
+                                builder: (context, storeSnapshot) {
+                                  String restaurantName = 'Lemakin Restaurant';
+                                  String? logoUrl;
+                                  bool isShopOpen = true;
+                                  bool isClosedTemporarily = false;
+                                  DateTime? closedUntil;
+
+                                  if (storeSnapshot.hasData && storeSnapshot.data!.exists) {
+                                    final sData = storeSnapshot.data!.data() as Map<String, dynamic>?;
+                                    if (sData != null) {
+                                      restaurantName = sData['restaurantName'] as String? ?? 'Lemakin Restaurant';
+                                      logoUrl = sData['logoUrl'] as String?;
+                                      isShopOpen = sData['isShopOpen'] as bool? ?? true;
+                                      isClosedTemporarily = sData['isClosedTemporarily'] as bool? ?? false;
+                                      if (sData['closedUntil'] != null) {
+                                        closedUntil = DateTime.tryParse(sData['closedUntil'] as String);
+                                      }
+                                    }
+                                  }
+
+                                  // Check if temp closed has expired
+                                  if (isClosedTemporarily &&
+                                      closedUntil != null &&
+                                      closedUntil.isBefore(DateTime.now())) {
+                                    isClosedTemporarily = false;
+                                    closedUntil = null;
+                                  }
+
+                                  final isCurrentlyClosed = !isShopOpen ||
+                                      (isClosedTemporarily &&
+                                          closedUntil != null &&
+                                          closedUntil.isAfter(DateTime.now()));
+
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      BannerCarousel(
-                                        items: (() {
-                                          final promoItems = menuState.menuItems
-                                              .where((item) =>
-                                                  item.originalPrice != null &&
-                                                  item.originalPrice! > item.price)
-                                              .toList();
-                                          if (promoItems.length <= 1) {
-                                            final recommended = menuState.menuItems
-                                                .where((item) => item.isRecommended)
-                                                .toList();
-                                            for (final item in recommended) {
-                                              if (!promoItems.any((promo) => promo.id == item.id)) {
-                                                promoItems.add(item);
+                                      // Banner Carousel with overlapping logo
+                                      Stack(
+                                        clipBehavior: Clip.none,
+                                        alignment: Alignment.bottomCenter,
+                                        children: [
+                                          BannerCarousel(
+                                            items: (() {
+                                              final promoItems = menuState.menuItems
+                                                  .where((item) =>
+                                                      item.originalPrice != null &&
+                                                      item.originalPrice! > item.price)
+                                                  .toList();
+                                              if (promoItems.length <= 1) {
+                                                final recommended = menuState.menuItems
+                                                    .where((item) => item.isRecommended)
+                                                    .toList();
+                                                for (final item in recommended) {
+                                                  if (!promoItems.any((promo) => promo.id == item.id)) {
+                                                    promoItems.add(item);
+                                                  }
+                                                }
                                               }
-                                            }
-                                          }
-                                          if (promoItems.isEmpty) {
-                                            return menuState.menuItems.take(3).toList();
-                                          }
-                                          return promoItems;
-                                        })(),
-                                        onTap: (item) => _handleItemTap(context, item),
-                                      ),
-                                      Positioned(
-                                        bottom: -32,
-                                        child: Container(
-                                          width: 72,
-                                          height: 72,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.1),
-                                                blurRadius: 8,
-                                                offset: const Offset(0, 4),
-                                              ),
-                                            ],
+                                              if (promoItems.isEmpty) {
+                                                return menuState.menuItems.take(3).toList();
+                                              }
+                                              return promoItems;
+                                            })(),
+                                            onTap: (item) => _handleItemTap(context, item),
                                           ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(4.0),
-                                            child: ClipOval(
-                                              child: Container(
+                                          Positioned(
+                                            bottom: -32,
+                                            child: Container(
+                                              width: 72,
+                                              height: 72,
+                                              decoration: BoxDecoration(
                                                 color: Colors.white,
+                                                shape: BoxShape.circle,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.1),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Padding(
                                                 padding: const EdgeInsets.all(4.0),
-                                                child: Image.asset(
-                                                  'assets/images/logo.png',
-                                                  fit: BoxFit.contain,
+                                                child: ClipOval(
+                                                  child: Container(
+                                                    color: Colors.white,
+                                                    padding: const EdgeInsets.all(4.0),
+                                                    child: logoUrl != null && logoUrl.isNotEmpty
+                                                        ? Image.network(
+                                                            logoUrl,
+                                                            fit: BoxFit.contain,
+                                                            errorBuilder: (context, error, stackTrace) => Image.asset(
+                                                              'assets/images/logo.png',
+                                                              fit: BoxFit.contain,
+                                                            ),
+                                                          )
+                                                        : Image.asset(
+                                                            'assets/images/logo.png',
+                                                            fit: BoxFit.contain,
+                                                          ),
+                                                  ),
                                                 ),
                                               ),
                                             ),
                                           ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 44),
+                                      
+                                      Text(
+                                        restaurantName,
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textDark,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 44),
-                                  
-                                  // Store Name
-                                  const Text(
-                                    'Jajanan by Lemakin',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textDark,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-
-                                  // Outlet Operational Status
-                                  StreamBuilder<DocumentSnapshot>(
-                                    stream: StoreStatusHelper.stream,
-                                    builder: (context, storeSnapshot) {
-                                      bool isShopOpen = true;
-                                      bool isClosedTemporarily = false;
-                                      DateTime? closedUntil;
-
-                                      if (storeSnapshot.hasData && storeSnapshot.data!.exists) {
-                                        final sData = storeSnapshot.data!.data() as Map<String, dynamic>?;
-                                        if (sData != null) {
-                                          isShopOpen = sData['isShopOpen'] as bool? ?? true;
-                                          isClosedTemporarily = sData['isClosedTemporarily'] as bool? ?? false;
-                                          if (sData['closedUntil'] != null) {
-                                            closedUntil = DateTime.tryParse(sData['closedUntil'] as String);
-                                          }
-                                        }
-                                      }
-
-                                      // Check if temp closed has expired
-                                      if (isClosedTemporarily &&
-                                          closedUntil != null &&
-                                          closedUntil.isBefore(DateTime.now())) {
-                                        isClosedTemporarily = false;
-                                        closedUntil = null;
-                                      }
-
-                                      final isCurrentlyClosed = !isShopOpen ||
-                                          (isClosedTemporarily &&
-                                              closedUntil != null &&
-                                              closedUntil.isAfter(DateTime.now()));
-
-                                      return Container(
+                                      const SizedBox(height: 8),
+                                      Container(
                                         margin: const EdgeInsets.symmetric(horizontal: 16),
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                         decoration: BoxDecoration(
@@ -260,11 +270,11 @@ class _MenuPageState extends State<MenuPage> {
                                             ),
                                           ],
                                         ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
-                                ],
+                                      ),
+                                      const SizedBox(height: 16),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
 
