@@ -16,4 +16,14 @@ class OrderRepositoryImpl implements OrderRepository {
   Future<List<OrderEntity>> getOrders() {
     return localDataSource.getOrders();
   }
+
+  @override
+  Future<void> updateOrder(OrderEntity order) {
+    return localDataSource.updateOrder(order);
+  }
+
+  @override
+  Future<void> deleteOrder(String id) {
+    return localDataSource.deleteOrder(id);
+  }
 }

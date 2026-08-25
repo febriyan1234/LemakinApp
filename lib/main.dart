@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -28,6 +29,16 @@ void main() async {
   runApp(const MyApp());
 }
 
+class LemakinScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+      };
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -40,7 +51,8 @@ class MyApp extends StatelessWidget {
         BlocProvider<AdminAuthCubit>(create: (_) => di.sl<AdminAuthCubit>()),
       ],
       child: MaterialApp.router(
-        title: 'Lemakin Ordering System',
+        scrollBehavior: LemakinScrollBehavior(),
+        title: 'Jajanan by Lemakin',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         routerConfig: AppRoutes.router,

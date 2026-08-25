@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/widgets/gradient_button.dart';
 import '../../../../domain/entities/order.dart';
 
 class OrderSuccessPage extends StatelessWidget {
@@ -205,23 +206,18 @@ class OrderSuccessPage extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     height: 48,
-                    child: ElevatedButton(
+                    child: GradientButton(
                       onPressed: () {
                         context.go('/menu');
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
+                      borderRadius: 12,
+                      height: 48,
                       child: const Text(
                         'Back to Menu',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ),

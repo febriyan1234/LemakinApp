@@ -16,4 +16,10 @@ abstract class MenuRepository {
   Future<void> updateMenuItem(MenuItem item);
   Future<void> deleteMenuItem(String id);
   Future<void> addCategory(MenuCategory category);
+  Future<void> updateCategory(MenuCategory category);
+  Future<void> deleteCategory(String id);
+  Future<List<MenuVariant>> getVariants();
+  Future<void> addVariant(MenuVariant variant);
+  Future<void> updateVariant(MenuVariant variant);
+  Future<void> deleteVariant(String id);
 }

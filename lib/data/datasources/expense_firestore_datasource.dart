@@ -89,6 +89,10 @@ class ExpenseFirestoreDataSourceImpl implements ExpenseLocalDataSource {
       'amount': expense.amount,
       'notes': expense.notes,
       'createdBy': expense.createdBy,
+      'items': expense.items?.map((item) => {
+        'name': item.name,
+        'price': item.price,
+      }).toList(),
     };
   }
 
@@ -103,6 +107,17 @@ class ExpenseFirestoreDataSourceImpl implements ExpenseLocalDataSource {
       date = DateTime.now();
     }
 
+    final itemsRaw = map['items'] as List<dynamic>?;
+    final List<ExpenseItem>? items = itemsRaw != null
+        ? itemsRaw.map((i) {
+            final m = Map<String, dynamic>.from(i as Map);
+            return ExpenseItem(
+              name: m['name'] as String? ?? '',
+              price: (m['price'] as num?)?.toDouble() ?? 0.0,
+            );
+          }).toList()
+        : null;
+
     return Expense(
       id: map['id'] as String? ?? '',
       date: date,
@@ -111,6 +126,7 @@ class ExpenseFirestoreDataSourceImpl implements ExpenseLocalDataSource {
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
       notes: map['notes'] as String?,
       createdBy: map['createdBy'] as String? ?? '',
+      items: items,
     );
   }
 }

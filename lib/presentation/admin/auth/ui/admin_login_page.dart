@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/gradient_button.dart';
 import '../cubit/admin_auth_cubit.dart';
 import '../cubit/admin_auth_state.dart';
 
@@ -168,7 +169,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                               return null;
                             },
                             decoration: const InputDecoration(
-                              hintText: 'admin@lemakin.com or admin',
+                              hintText: 'username',
                               prefixIcon: Icon(Icons.person_outline, size: 20),
                             ),
                           ),
@@ -222,8 +223,10 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                           SizedBox(
                             width: double.infinity,
                             height: 50,
-                            child: ElevatedButton(
+                            child: GradientButton(
                               onPressed: isLoading ? null : _submitLogin,
+                              borderRadius: 12,
+                              height: 50,
                               child: isLoading
                                   ? const SizedBox(
                                       width: 24,
@@ -233,18 +236,13 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                                         strokeWidth: 2.5,
                                       ),
                                     )
-                                  : const Text('Login to Dashboard'),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Center(
-                            child: Text(
-                              'Demo Credentials: admin / admin123',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textLight,
-                                fontStyle: FontStyle.italic,
-                              ),
+                                  : const Text(
+                                      'Login to Dashboard',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],

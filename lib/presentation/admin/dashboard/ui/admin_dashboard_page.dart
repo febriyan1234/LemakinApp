@@ -297,14 +297,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                   _buildFinancialRow(
                                     'Total Revenue',
                                     state.todaySales,
-                                    AppColors.primary,
+                                    AppColors.primaryGradient,
                                     1.0,
                                   ),
                                   const SizedBox(height: 16),
                                   _buildFinancialRow(
                                     'Total Expenses',
                                     state.todayExpenses,
-                                    AppColors.error,
+                                    const LinearGradient(
+                                      colors: [Color(0xFFE57373), Color(0xFFEF5350)],
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    ),
                                     state.todaySales > 0
                                         ? (state.todayExpenses /
                                                   state.todaySales)
@@ -315,7 +319,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                   _buildFinancialRow(
                                     'Net Income',
                                     state.todayIncome,
-                                    AppColors.success,
+                                    const LinearGradient(
+                                      colors: [Color(0xFF81C784), Color(0xFF4CAF50)],
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    ),
                                     state.todaySales > 0
                                         ? (state.todayIncome / state.todaySales)
                                               .clamp(0.0, 1.0)
@@ -812,7 +820,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Widget _buildFinancialRow(
     String name,
     double amount,
-    Color color,
+    Gradient gradient,
     double percentage,
   ) {
     return Column(
@@ -856,7 +864,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   height: 8,
                   width: constraints.maxWidth * percentage,
                   decoration: BoxDecoration(
-                    color: color,
+                    gradient: gradient,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
@@ -950,16 +958,29 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Colors.grey[200],
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              AppColors.primary,
+                        child: Stack(
+                          children: [
+                            Container(
+                              height: 6,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(3),
+                              ),
                             ),
-                            minHeight: 5,
-                          ),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                return Container(
+                                  height: 6,
+                                  width: constraints.maxWidth * progress,
+                                  decoration: BoxDecoration(
+                                    gradient: AppColors.primaryGradient,
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1018,7 +1039,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: mockTrx.length,
-      separatorBuilder: (_, __) => const Divider(height: 20),
+      separatorBuilder: (_, __) => const Divider(height: 20, color: AppColors.border),
       itemBuilder: (context, index) {
         final trx = mockTrx[index];
 

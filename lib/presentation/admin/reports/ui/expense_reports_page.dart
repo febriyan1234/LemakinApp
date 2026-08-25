@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/widgets/gradient_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../domain/entities/expense.dart';
@@ -160,62 +162,80 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
               ? state.expenses.sublist(startIndex, endIndex)
               : <Expense>[];
 
-          return Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Total Card & Add Expense Action Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return RefreshIndicator(
+            onRefresh: () => _cubit.refreshReports(),
+            color: AppColors.primary,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // Total Card & Add Expense Action Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Total Ledger Expenses',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Total Ledger Expenses',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              CurrencyFormatter.format(state.totalExpenseSum),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          CurrencyFormatter.format(state.totalExpenseSum),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.error,
+                        GradientButton(
+                          onPressed: () => context.go('/admin/reports/expense/add'),
+                          borderRadius: 12,
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add, size: 20, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'Add Expense',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    ElevatedButton.icon(
-                      onPressed: () => _showAddEditExpenseDialog(context),
-                      icon: const Icon(Icons.add, size: 20),
-                      label: const Text('Add Expense'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                // Search and Filters Panel
-                _buildFilterPanel(context, state),
-                const SizedBox(height: 20),
+                    // Search and Filters Panel
+                    _buildFilterPanel(context, state),
+                    const SizedBox(height: 20),
 
-                // Expenses Table
-                Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: totalExpensesCount == 0
-                          ? _buildEmptyState()
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  child: LayoutBuilder(
+                    // Expenses Table
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: totalExpensesCount == 0
+                            ? _buildEmptyState()
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  LayoutBuilder(
                                     builder: (context, constraints) {
                                       return _buildExpenseList(
                                         paginatedExpenses,
@@ -223,15 +243,15 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
                                       );
                                     },
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                _buildPaginationControls(totalPages),
-                              ],
-                            ),
+                                  const SizedBox(height: 16),
+                                  _buildPaginationControls(totalPages),
+                                ],
+                              ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         }
@@ -363,18 +383,30 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
         ),
         Row(
           children: [
-            OutlinedButton(
+            GradientButton(
               onPressed: _currentPage > 1
                   ? () => setState(() => _currentPage--)
                   : null,
-              child: const Text('Previous', style: TextStyle(fontSize: 12)),
+              borderRadius: 12,
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: const Text(
+                'Previous',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(width: 8),
-            OutlinedButton(
+            GradientButton(
               onPressed: _currentPage < totalPages
                   ? () => setState(() => _currentPage++)
                   : null,
-              child: const Text('Next', style: TextStyle(fontSize: 12)),
+              borderRadius: 12,
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: const Text(
+                'Next',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -434,24 +466,50 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: const Text('Expense Details'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDetailRow('Expense ID:', expense.id),
-            _buildDetailRow('Date:', _formatIndoDate(expense.date)),
-            _buildDetailRow('Category:', expense.category),
-            _buildDetailRow('Description:', expense.description),
-            _buildDetailRow(
-              'Amount:',
-              CurrencyFormatter.format(expense.amount),
-              valColor: AppColors.error,
-              valBold: true,
+        content: SizedBox(
+          width: 450,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailRow('Expense ID:', expense.id),
+                _buildDetailRow('Date:', _formatIndoDate(expense.date)),
+                _buildDetailRow('Category:', expense.category),
+                _buildDetailRow('Description:', expense.description),
+                _buildDetailRow(
+                  'Amount:',
+                  CurrencyFormatter.format(expense.amount),
+                  valColor: AppColors.error,
+                  valBold: true,
+                ),
+                _buildDetailRow('Created By:', expense.createdBy),
+                if (expense.notes != null && expense.notes!.isNotEmpty)
+                  _buildDetailRow('Notes:', expense.notes!),
+                if (expense.items != null && expense.items!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Items Purchased:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark),
+                  ),
+                  const SizedBox(height: 6),
+                  ...expense.items!.map((item) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('- ${item.name}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            Text(CurrencyFormatter.format(item.price),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                          ],
+                        ),
+                      )),
+                ],
+              ],
             ),
-            _buildDetailRow('Created By:', expense.createdBy),
-            if (expense.notes != null && expense.notes!.isNotEmpty)
-              _buildDetailRow('Notes:', expense.notes!),
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -500,240 +558,7 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
     );
   }
 
-  void _showAddEditExpenseDialog(BuildContext context, {Expense? expense}) {
-    final formKey = GlobalKey<FormState>();
-    final isEdit = expense != null;
 
-    final descController = TextEditingController(
-      text: expense?.description ?? '',
-    );
-    final amountController = TextEditingController(
-      text: expense != null ? '${expense.amount.toInt()}' : '',
-    );
-    final notesController = TextEditingController(text: expense?.notes ?? '');
-
-    String selectedCat = expense?.category ?? _expenseCategories[0];
-    DateTime selectedDate = expense?.date ?? DateTime.now();
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(
-                isEdit ? 'Edit Expense Record' : 'Record New Expense',
-              ),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Date Selector
-                      const Text(
-                        'Date *',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      InkWell(
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: selectedDate,
-                            firstDate: DateTime.now().subtract(
-                              const Duration(days: 365),
-                            ),
-                            lastDate: DateTime.now(),
-                          );
-                          if (picked != null) {
-                            setDialogState(() {
-                              selectedDate = picked;
-                            });
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                DateFormat('d MMM yyyy').format(selectedDate),
-                              ),
-                              const Icon(
-                                Icons.calendar_today,
-                                size: 16,
-                                color: AppColors.textSecondary,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Category
-                      const Text(
-                        'Category *',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        value: selectedCat,
-                        items: _expenseCategories
-                            .map(
-                              (c) => DropdownMenuItem(value: c, child: Text(c)),
-                            )
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            selectedCat = val;
-                          }
-                        },
-                        decoration: const InputDecoration(
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Description
-                      const Text(
-                        'Description *',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: descController,
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty)
-                            return 'Description is required';
-                          return null;
-                        },
-                        decoration: const InputDecoration(
-                          hintText: 'e.g. Rice supply stock purchase',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Amount
-                      const Text(
-                        'Amount (IDR) *',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: amountController,
-                        keyboardType: TextInputType.number,
-                        validator: (val) {
-                          if (val == null || val.isEmpty)
-                            return 'Amount is required';
-                          final parsed = double.tryParse(val);
-                          if (parsed == null || parsed <= 0)
-                            return 'Must be greater than 0';
-                          return null;
-                        },
-                        decoration: const InputDecoration(
-                          hintText: 'e.g. 500000',
-                          prefixText: 'Rp ',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Notes
-                      const Text(
-                        'Notes',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: notesController,
-                        maxLines: 2,
-                        decoration: const InputDecoration(
-                          hintText: 'Optional notes...',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      Navigator.pop(dialogCtx);
-                      final amt = double.parse(amountController.text);
-                      final desc = descController.text.trim();
-                      final note = notesController.text.trim();
-
-                      if (isEdit) {
-                        final updated = expense.copyWith(
-                          date: selectedDate,
-                          category: selectedCat,
-                          description: desc,
-                          amount: amt,
-                          notes: note.isNotEmpty ? note : null,
-                        );
-                        _cubit.updateExpense(updated);
-                      } else {
-                        final added = Expense(
-                          id: 'EXP_${DateTime.now().millisecondsSinceEpoch}',
-                          date: selectedDate,
-                          category: selectedCat,
-                          description: desc,
-                          amount: amt,
-                          notes: note.isNotEmpty ? note : null,
-                          createdBy: 'Super Admin',
-                        );
-                        _cubit.addExpense(added);
-                      }
-                    }
-                  },
-                  child: const Text('Save Record'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   Widget _buildExpenseList(List<Expense> expenses, bool isCompact) {
     if (isCompact) {
@@ -859,10 +684,9 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
                             color: Colors.green,
                             size: 18,
                           ),
-                          tooltip: 'Edit',
-                          onPressed: () => _showAddEditExpenseDialog(
-                            context,
-                            expense: expense,
+                          onPressed: () => context.go(
+                            '/admin/reports/expense/edit/${expense.id}',
+                            extra: expense,
                           ),
                           style: IconButton.styleFrom(
                             backgroundColor: Colors.green.withOpacity(0.05),
@@ -983,8 +807,10 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
                         size: 20,
                       ),
                       tooltip: 'Edit',
-                      onPressed: () =>
-                          _showAddEditExpenseDialog(context, expense: expense),
+                      onPressed: () => context.go(
+                        '/admin/reports/expense/edit/${expense.id}',
+                        extra: expense,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(

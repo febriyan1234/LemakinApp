@@ -14,16 +14,48 @@ abstract class MenuLocalDataSource {
   Future<void> updateMenuItem(MenuItem item);
   Future<void> deleteMenuItem(String id);
   Future<void> addCategory(MenuCategory category);
+  Future<void> updateCategory(MenuCategory category);
+  Future<void> deleteCategory(String id);
+  Future<List<MenuVariant>> getVariants();
+  Future<void> addVariant(MenuVariant variant);
+  Future<void> updateVariant(MenuVariant variant);
+  Future<void> deleteVariant(String id);
 }
 
 class MenuLocalDataSourceImpl implements MenuLocalDataSource {
   late final List<MenuCategory> _categories = [
-    const MenuCategory(id: 'cat_rice', name: 'Rice'),
-    const MenuCategory(id: 'cat_noodles', name: 'Noodles'),
-    const MenuCategory(id: 'cat_chicken', name: 'Chicken'),
-    const MenuCategory(id: 'cat_snack', name: 'Snack'),
-    const MenuCategory(id: 'cat_drink', name: 'Drink'),
-    const MenuCategory(id: 'cat_dessert', name: 'Dessert'),
+    const MenuCategory(id: 'cat_rice', name: 'Rice', orderIndex: 0),
+    const MenuCategory(id: 'cat_noodles', name: 'Noodles', orderIndex: 1),
+    const MenuCategory(id: 'cat_chicken', name: 'Chicken', orderIndex: 2),
+    const MenuCategory(id: 'cat_snack', name: 'Snack', orderIndex: 3),
+    const MenuCategory(id: 'cat_drink', name: 'Drink', orderIndex: 4),
+    const MenuCategory(id: 'cat_dessert', name: 'Dessert', orderIndex: 5),
+  ];
+
+  late final List<MenuVariant> _variants = [
+    const MenuVariant(
+      id: 'v_flavor',
+      name: 'Flavor',
+      isRequired: true,
+      minSelections: 1,
+      maxSelections: 1,
+      options: [
+        VariantOption(id: 'opt_orig', name: 'Original'),
+        VariantOption(id: 'opt_spicy', name: 'Spicy', additionalPrice: 3000),
+        VariantOption(id: 'opt_cheese', name: 'Cheese', additionalPrice: 5000),
+      ],
+    ),
+    const MenuVariant(
+      id: 'v_size',
+      name: 'Size',
+      isRequired: false,
+      minSelections: 0,
+      maxSelections: 1,
+      options: [
+        VariantOption(id: 'opt_reg', name: 'Regular'),
+        VariantOption(id: 'opt_large', name: 'Large', additionalPrice: 7000),
+      ],
+    ),
   ];
 
   late List<MenuItem> _menuItems = [
@@ -33,6 +65,7 @@ class MenuLocalDataSourceImpl implements MenuLocalDataSource {
       description:
           'Crispy chicken breast with savory tonkatsu sauce, cabbage salad and warm rice.',
       price: 35000,
+      originalPrice: 42000,
       imageUrl:
           'https://images.unsplash.com/photo-1598515214211-89d3e73ae83b?q=80&w=600',
       isRecommended: true,
@@ -411,6 +444,7 @@ class MenuLocalDataSourceImpl implements MenuLocalDataSource {
   @override
   Future<List<MenuCategory>> getCategories() async {
     await Future.delayed(const Duration(milliseconds: 300));
+    _categories.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
     return _categories;
   }
 
@@ -436,7 +470,9 @@ class MenuLocalDataSourceImpl implements MenuLocalDataSource {
       items = items.where((item) => item.categoryId == categoryId);
     }
 
-    return items.toList();
+    final resultList = items.toList();
+    resultList.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    return resultList;
   }
 
   @override
@@ -482,5 +518,47 @@ class MenuLocalDataSourceImpl implements MenuLocalDataSource {
   Future<void> addCategory(MenuCategory category) async {
     await Future.delayed(const Duration(milliseconds: 200));
     _categories.add(category);
+  }
+
+  @override
+  Future<void> updateCategory(MenuCategory category) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final index = _categories.indexWhere((element) => element.id == category.id);
+    if (index >= 0) {
+      _categories[index] = category;
+    }
+  }
+
+  @override
+  Future<void> deleteCategory(String id) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _categories.removeWhere((element) => element.id == id);
+  }
+
+  @override
+  Future<List<MenuVariant>> getVariants() async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    return _variants;
+  }
+
+  @override
+  Future<void> addVariant(MenuVariant variant) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _variants.add(variant);
+  }
+
+  @override
+  Future<void> updateVariant(MenuVariant variant) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final index = _variants.indexWhere((element) => element.id == variant.id);
+    if (index >= 0) {
+      _variants[index] = variant;
+    }
+  }
+
+  @override
+  Future<void> deleteVariant(String id) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _variants.removeWhere((element) => element.id == id);
   }
 }

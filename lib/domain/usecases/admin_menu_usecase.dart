@@ -22,4 +22,28 @@ class AdminMenuUseCase {
   Future<void> addCategory(MenuCategory category) {
     return repository.addCategory(category);
   }
+
+  Future<void> updateCategory(MenuCategory category) {
+    return repository.updateCategory(category);
+  }
+
+  Future<void> deleteCategory(String id) {
+    return repository.deleteCategory(id);
+  }
+
+  Future<List<MenuVariant>> getVariants() {
+    return repository.getVariants();
+  }
+
+  Future<void> addVariant(MenuVariant variant) {
+    return repository.addVariant(variant);
+  }
+
+  Future<void> updateVariant(MenuVariant variant) {
+    return repository.updateVariant(variant);
+  }
+
+  Future<void> deleteVariant(String id) {
+    return repository.deleteVariant(id);
+  }
 }

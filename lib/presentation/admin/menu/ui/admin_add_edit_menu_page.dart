@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/gradient_button.dart';
 import '../../../../domain/entities/menu_item.dart';
 import '../../../../domain/entities/menu_category.dart';
 import '../cubit/admin_menu_cubit.dart';
@@ -22,12 +23,15 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
   late final TextEditingController _nameController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
+  late final TextEditingController _discountController;
   late final TextEditingController _stockController;
   late final TextEditingController _imageUrlController;
 
   String? _selectedCategoryId;
   bool _isActive = true;
   bool _isRecommended = false;
+  String _pickedImageUrl = '';
+  final List<MenuVariant> _selectedVariants = [];
 
   bool get _isEditMode => widget.menuItem != null;
 
@@ -36,12 +40,25 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
     super.initState();
     final item = widget.menuItem;
 
+    // Fetch menus/categories on entry to populate dropdown lists immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AdminMenuCubit>().fetchMenus();
+      }
+    });
+
     _nameController = TextEditingController(text: item?.name ?? '');
     _descriptionController = TextEditingController(
       text: item?.description ?? '',
     );
+    final normalPrice = item != null ? (item.originalPrice ?? item.price) : 0.0;
+    final discount = (item != null && item.originalPrice != null) ? (item.originalPrice! - item.price) : 0.0;
+
     _priceController = TextEditingController(
-      text: item != null ? '${item.price.toInt()}' : '',
+      text: item != null ? '${normalPrice.toInt()}' : '',
+    );
+    _discountController = TextEditingController(
+      text: (item != null && item.originalPrice != null) ? '${discount.toInt()}' : '',
     );
     _stockController = TextEditingController(
       text: item != null ? '${item.stock}' : '50',
@@ -55,6 +72,9 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
     _selectedCategoryId = item?.categoryId;
     _isActive = item?.isActive ?? true;
     _isRecommended = item?.isRecommended ?? false;
+    if (item?.variants != null) {
+      _selectedVariants.addAll(item!.variants);
+    }
   }
 
   @override
@@ -62,6 +82,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _discountController.dispose();
     _stockController.dispose();
     _imageUrlController.dispose();
     super.dispose();
@@ -71,20 +92,29 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
     if (_formKey.currentState!.validate()) {
       final name = _nameController.text.trim();
       final desc = _descriptionController.text.trim();
-      final price = double.parse(_priceController.text);
+      final normalPrice = double.parse(_priceController.text);
+      final discountStr = _discountController.text.trim();
+      final discount = discountStr.isNotEmpty ? (double.tryParse(discountStr) ?? 0.0) : 0.0;
+
+      final finalPrice = normalPrice - discount;
+      final double? originalPrice = discount > 0 ? normalPrice : null;
       final stock = int.parse(_stockController.text);
-      final imageUrl = _imageUrlController.text.trim();
+      final imageUrl = _pickedImageUrl.isNotEmpty
+          ? _pickedImageUrl
+          : _imageUrlController.text.trim();
 
       if (_isEditMode) {
         final updatedItem = widget.menuItem!.copyWith(
           name: name,
           description: desc,
-          price: price,
+          price: finalPrice,
+          originalPrice: originalPrice,
           stock: stock,
           imageUrl: imageUrl,
           categoryId: _selectedCategoryId!,
           isActive: _isActive,
           isRecommended: _isRecommended,
+          variants: _selectedVariants,
         );
         context.read<AdminMenuCubit>().updateMenu(updatedItem);
       } else {
@@ -92,13 +122,14 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
           id: 'item_${DateTime.now().millisecondsSinceEpoch}',
           name: name,
           description: desc,
-          price: price,
+          price: finalPrice,
+          originalPrice: originalPrice,
           stock: stock,
           imageUrl: imageUrl,
           categoryId: _selectedCategoryId!,
           isActive: _isActive,
           isRecommended: _isRecommended,
-          variants: const [], // Standard variant list empty by default
+          variants: _selectedVariants,
         );
         context.read<AdminMenuCubit>().addMenu(newItem);
       }
@@ -161,7 +192,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
               style: TextStyle(color: AppColors.textSecondary),
             ),
           ),
-          ElevatedButton(
+          GradientButton(
             onPressed: () {
               final name = controller.text.trim();
               if (name.isNotEmpty) {
@@ -180,13 +211,16 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                 Navigator.pop(dialogCtx);
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+            borderRadius: 8,
+            height: 38,
+            child: const Text(
+              'Add Category',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
               ),
             ),
-            child: const Text('Add Category'),
           ),
         ],
       ),
@@ -223,8 +257,9 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                     onTap: () {
                       Navigator.pop(sheetCtx);
                       setState(() {
-                        _imageUrlController.text =
+                        _pickedImageUrl =
                             'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600';
+                        _imageUrlController.clear();
                       });
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -359,7 +394,8 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
               return InkWell(
                 onTap: () {
                   setState(() {
-                    _imageUrlController.text = photo['url']!;
+                    _pickedImageUrl = photo['url']!;
+                    _imageUrlController.clear();
                   });
                   Navigator.pop(dialogCtx);
                 },
@@ -402,6 +438,15 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
   Widget build(BuildContext context) {
     return BlocBuilder<AdminMenuCubit, AdminMenuState>(
       builder: (context, state) {
+        if (state is AdminMenuLoading || state is AdminMenuInitial) {
+          return const SizedBox(
+            height: 300,
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
         List<MenuCategory> categoriesList = [];
         if (state is AdminMenuLoaded) {
           categoriesList = state.categories;
@@ -462,7 +507,11 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                       child: ListenableBuilder(
                         listenable: _imageUrlController,
                         builder: (context, _) {
-                          final hasImage = _imageUrlController.text.isNotEmpty;
+                          final showPicked = _pickedImageUrl.isNotEmpty;
+                          final showUrl = _imageUrlController.text.isNotEmpty;
+                          final hasImage = showPicked || showUrl;
+                          final displayUrl = showPicked ? _pickedImageUrl : _imageUrlController.text;
+
                           return Container(
                             height: 180,
                             width: double.infinity,
@@ -476,7 +525,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                               image: hasImage
                                   ? DecorationImage(
                                       image: NetworkImage(
-                                        _imageUrlController.text,
+                                        displayUrl,
                                       ),
                                       fit: BoxFit.cover,
                                     )
@@ -494,7 +543,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.6),
+                                        color: Colors.black.withValues(alpha: 0.6),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: const Row(
@@ -555,6 +604,36 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                         },
                       ),
                     ),
+                    const SizedBox(height: 20),
+
+                    // Image URL Input field (positioned directly below the image preview card)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Image URL',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _imageUrlController,
+                          onChanged: (val) {
+                            if (val.isNotEmpty && _pickedImageUrl.isNotEmpty) {
+                              setState(() {
+                                _pickedImageUrl = '';
+                              });
+                            }
+                          },
+                          decoration: const InputDecoration(
+                            hintText: 'Paste unsplash/web link...',
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 24),
 
                     // Menu Name
@@ -601,72 +680,71 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Category & Price Row
+                    // Category Selector (Full Width)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Category *',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedCategoryId,
+                                validator: (val) {
+                                  if (val == null || val.isEmpty) {
+                                    return 'Required';
+                                  }
+                                  return null;
+                                },
+                                items: categoriesList.map((c) {
+                                  return DropdownMenuItem(
+                                    value: c.id,
+                                    child: Text(c.name),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _selectedCategoryId = val;
+                                  });
+                                },
+                                decoration: const InputDecoration(
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () =>
+                                  _showAddCategoryDialog(context),
+                              tooltip: 'Add Category',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Price & Discount Row
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Category Selector with Plus Add Button
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Category *',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: DropdownButtonFormField<String>(
-                                      value: _selectedCategoryId,
-                                      validator: (val) {
-                                        if (val == null || val.isEmpty) {
-                                          return 'Required';
-                                        }
-                                        return null;
-                                      },
-                                      items: categoriesList.map((c) {
-                                        return DropdownMenuItem(
-                                          value: c.id,
-                                          child: Text(c.name),
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        setState(() {
-                                          _selectedCategoryId = val;
-                                        });
-                                      },
-                                      decoration: const InputDecoration(
-                                        contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.add_circle_outline,
-                                      color: AppColors.primary,
-                                    ),
-                                    onPressed: () =>
-                                        _showAddCategoryDialog(context),
-                                    tooltip: 'Add Category',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
                         // Price Input
                         Expanded(
                           child: Column(
@@ -695,7 +773,46 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                                   return null;
                                 },
                                 decoration: const InputDecoration(
-                                  hintText: 'e.g. 25000',
+                                  hintText: 'e.g. 8000',
+                                  prefixText: 'Rp ',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Discount Input (Optional)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Discount Cut (Optional)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _discountController,
+                                keyboardType: TextInputType.number,
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) return null;
+                                  final parsed = double.tryParse(val.trim());
+                                  if (parsed == null || parsed < 0) {
+                                    return 'Cannot be negative';
+                                  }
+                                  final normalPriceStr = _priceController.text.trim();
+                                  final normalPrice = double.tryParse(normalPriceStr);
+                                  if (normalPrice != null && parsed >= normalPrice) {
+                                    return 'Must be < Price';
+                                  }
+                                  return null;
+                                },
+                                decoration: const InputDecoration(
+                                  hintText: 'e.g. 2000',
                                   prefixText: 'Rp ',
                                 ),
                               ),
@@ -706,68 +823,34 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Stock & Image URL Row
-                    Row(
+                    // Stock Input
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Stock Input
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Initial Stock *',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _stockController,
-                                keyboardType: TextInputType.number,
-                                validator: (val) {
-                                  if (val == null || val.isEmpty) {
-                                    return 'Required';
-                                  }
-                                  final parsed = int.tryParse(val);
-                                  if (parsed == null || parsed < 0) {
-                                    return 'Cannot be negative';
-                                  }
-                                  return null;
-                                },
-                                decoration: const InputDecoration(
-                                  hintText: 'e.g. 50',
-                                ),
-                              ),
-                            ],
+                        const Text(
+                          'Initial Stock *',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        // Image URL
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Image URL',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _imageUrlController,
-                                decoration: const InputDecoration(
-                                  hintText: 'Paste unsplash/web link...',
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _stockController,
+                          keyboardType: TextInputType.number,
+                          validator: (val) {
+                            if (val == null || val.isEmpty) {
+                              return 'Required';
+                            }
+                            final parsed = int.tryParse(val);
+                            if (parsed == null || parsed < 0) {
+                              return 'Cannot be negative';
+                            }
+                            return null;
+                          },
+                          decoration: const InputDecoration(
+                            hintText: 'e.g. 50',
                           ),
                         ),
                       ],
@@ -856,25 +939,127 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 24),
+
+                    // Dish Variants Section
+                    const Text(
+                      'Dish Variants',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Select variants that apply to this dish. Manage variants globally in the Variant tab.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (state is AdminMenuLoaded && state.variants.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'No global variants created yet. Go to Variant tab to create one.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (state is AdminMenuLoaded)
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: state.variants.length,
+                        itemBuilder: (context, index) {
+                          final variant = state.variants[index];
+                          final isSelected = _selectedVariants.any((v) => v.id == variant.id);
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFFFF5E62).withValues(alpha: 0.02) : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected ? const Color(0xFFFF5E62) : Colors.grey[200]!,
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: CheckboxListTile(
+                              activeColor: const Color(0xFFFF5E62),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              title: Text(
+                                variant.name,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${variant.isRequired ? "Required" : "Optional"} • Options: ${variant.options.map((o) => '${o.name} (+Rp ${o.additionalPrice.toInt()})').join(', ')}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              value: isSelected,
+                              onChanged: (checked) {
+                                setState(() {
+                                  if (checked == true) {
+                                    _selectedVariants.add(variant);
+                                  } else {
+                                    _selectedVariants.removeWhere((v) => v.id == variant.id);
+                                  }
+                                });
+                              },
+                            ),
+                          );
+                        },
+                      ),
                     const SizedBox(height: 32),
 
                     // Submit & Cancel Action Buttons
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => context.go('/admin/menu'),
-                            child: const Text('Cancel'),
+                          child: SizedBox(
+                            height: 48,
+                            child: OutlinedButton(
+                              onPressed: () => context.go('/admin/menu'),
+                              style: OutlinedButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: const Text('Cancel'),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: ElevatedButton(
+                          child: GradientButton(
                             onPressed: _submitForm,
+                            borderRadius: 12,
                             child: Text(
                               _isEditMode
-                                  ? 'Save Specifications'
+                                  ? 'Save'
                                   : 'Publish Menu',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),

@@ -55,4 +55,34 @@ class MenuRepositoryImpl implements MenuRepository {
   Future<void> addCategory(MenuCategory category) {
     return localDataSource.addCategory(category);
   }
+
+  @override
+  Future<void> updateCategory(MenuCategory category) {
+    return localDataSource.updateCategory(category);
+  }
+
+  @override
+  Future<void> deleteCategory(String id) {
+    return localDataSource.deleteCategory(id);
+  }
+
+  @override
+  Future<List<MenuVariant>> getVariants() {
+    return localDataSource.getVariants();
+  }
+
+  @override
+  Future<void> addVariant(MenuVariant variant) {
+    return localDataSource.addVariant(variant);
+  }
+
+  @override
+  Future<void> updateVariant(MenuVariant variant) {
+    return localDataSource.updateVariant(variant);
+  }
+
+  @override
+  Future<void> deleteVariant(String id) {
+    return localDataSource.deleteVariant(id);
+  }
 }

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/widgets/gradient_button.dart';
 import '../../../../domain/entities/order.dart';
 import '../../cart/cubit/cart_cubit.dart';
 import '../../cart/cubit/cart_state.dart';
@@ -23,6 +24,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  bool _isScheduled = false;
+  DateTime? _scheduledDateTime;
 
   @override
   void initState() {
@@ -48,12 +51,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Future<void> _redirectToWhatsApp(OrderEntity order) async {
     final buffer = StringBuffer();
-    buffer.writeln('Halo, saya ingin pesan:');
-    buffer.writeln('-----------------------------------------');
-    buffer.writeln('Nama: ${order.customer.name}');
-    buffer.writeln('Alamat/Meja: ${order.customer.address}');
+    buffer.writeln('Halo, saya ${order.customer.name} ingin pesan:');
     buffer.writeln();
-
+    buffer.writeln('--------------------------------------');
     for (final item in order.items) {
       buffer.writeln(
         '${item.quantity}x ${item.menuItem.name} (${item.menuItem.price.toInt()}/pcs)',
@@ -68,8 +68,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
         buffer.writeln('\tCatatan: "${item.notes}"');
       }
     }
-
+    buffer.writeln('--------------------------------------');
     buffer.writeln();
+    buffer.writeln('Alamat: ${order.customer.address}');
+    if (order.scheduledAt != null) {
+      final dateStr = '${order.scheduledAt!.day.toString().padLeft(2, '0')}/${order.scheduledAt!.month.toString().padLeft(2, '0')}/${order.scheduledAt!.year}';
+      final timeStr = '${order.scheduledAt!.hour.toString().padLeft(2, '0')}:${order.scheduledAt!.minute.toString().padLeft(2, '0')}';
+      buffer.writeln('Jadwal Kirim: $dateStr jam $timeStr');
+    } else {
+      buffer.writeln('Jadwal Kirim: Sekarang (Order Now)');
+    }
+    buffer.writeln('Order ID: ${order.id}');
+    buffer.writeln();
+
     buffer.writeln('Pembayaran Qris https://lemakin/pembayaran');
     buffer.writeln('Mohon konfirmasi pesanan saya. Terima kasih!');
 
@@ -96,6 +107,89 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
+  Future<void> _selectDateTime() async {
+    final DateTime now = DateTime.now();
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: _scheduledDateTime != null
+          ? TimeOfDay.fromDateTime(_scheduledDateTime!)
+          : TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))),
+      initialEntryMode: TimePickerEntryMode.inputOnly,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textDark,
+            ),
+            dialogTheme: const DialogThemeData(
+              actionsPadding: EdgeInsets.only(left: 12, right: 12, bottom: 16),
+            ),
+            timePickerTheme: TimePickerThemeData(
+              cancelButtonStyle: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                minimumSize: const Size(50, 36),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+              confirmButtonStyle: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                minimumSize: const Size(50, 36),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+              dayPeriodColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return AppColors.primary;
+                }
+                return Colors.transparent;
+              }),
+              dayPeriodTextColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return Colors.white;
+                }
+                return AppColors.textDark;
+              }),
+              dayPeriodBorderSide: const BorderSide(color: AppColors.border),
+              dialHandColor: AppColors.primary,
+              dialBackgroundColor: Colors.grey[50],
+              entryModeIconColor: AppColors.primary,
+              hourMinuteColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return AppColors.primarySoft;
+                }
+                return Colors.grey[100]!;
+              }),
+              hourMinuteTextColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return AppColors.primary;
+                }
+                return AppColors.textDark;
+              }),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedTime != null) {
+      setState(() {
+        _scheduledDateTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
@@ -103,10 +197,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => context.pop(),
           ),
-          title: const Text('Checkout'),
+          title: const Text(
+            'Checkout',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+            ),
+          ),
+          elevation: 0,
         ),
         body: BlocConsumer<CheckoutCubit, CheckoutState>(
           listener: (context, state) async {
@@ -158,40 +264,239 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                             const SizedBox(height: 12),
 
-                            TextField(
-                              controller: _nameController,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: const InputDecoration(
-                                labelText: 'Name (Optional)',
-                                hintText: 'Enter your name',
-                              ),
-                            ),
-                            const SizedBox(height: 16),
+                             const Text(
+                               'Name',
+                               style: TextStyle(
+                                 fontSize: 13,
+                                 fontWeight: FontWeight.bold,
+                                 color: AppColors.textSecondary,
+                               ),
+                             ),
+                             const SizedBox(height: 6),
+                             TextField(
+                               controller: _nameController,
+                               textCapitalization: TextCapitalization.words,
+                               decoration: InputDecoration(
+                                 hintText: 'Enter your name',
+                                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                                 filled: true,
+                                 fillColor: Colors.grey[100],
+                                 border: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: BorderSide.none,
+                                 ),
+                                 enabledBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: BorderSide.none,
+                                 ),
+                                 focusedBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                                 ),
+                               ),
+                               style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                             ),
+                             const SizedBox(height: 16),
 
-                            TextField(
-                              controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              decoration: InputDecoration(
-                                labelText: 'Phone Number (Optional)',
-                                hintText: 'e.g. 08123456789',
-                                errorText: phoneError,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
+                             const Text(
+                               'Phone Number',
+                               style: TextStyle(
+                                 fontSize: 13,
+                                 fontWeight: FontWeight.bold,
+                                 color: AppColors.textSecondary,
+                               ),
+                             ),
+                             const SizedBox(height: 6),
+                             TextField(
+                               controller: _phoneController,
+                               keyboardType: TextInputType.phone,
+                               decoration: InputDecoration(
+                                 hintText: 'e.g. 08123456789',
+                                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                                 filled: true,
+                                 fillColor: Colors.grey[100],
+                                 border: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: BorderSide.none,
+                                 ),
+                                 enabledBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: BorderSide.none,
+                                 ),
+                                 focusedBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                                 ),
+                                 errorBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: const BorderSide(color: AppColors.error, width: 1),
+                                 ),
+                                 errorText: phoneError,
+                               ),
+                               style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                             ),
+                             const SizedBox(height: 16),
 
-                            TextField(
-                              controller: _addressController,
-                              maxLines: 2,
-                              textCapitalization: TextCapitalization.sentences,
-                              decoration: InputDecoration(
-                                labelText: 'Address *',
-                                hintText: 'Enter delivery address',
-                                errorText: addressError,
-                              ),
-                            ),
+                             Row(
+                               children: [
+                                 const Text(
+                                   'Address',
+                                   style: TextStyle(
+                                     fontSize: 13,
+                                     fontWeight: FontWeight.bold,
+                                     color: AppColors.textSecondary,
+                                   ),
+                                 ),
+                                 const SizedBox(width: 4),
+                                 const Text(
+                                   '*',
+                                   style: TextStyle(
+                                     color: Colors.red,
+                                     fontSize: 13,
+                                     fontWeight: FontWeight.bold,
+                                   ),
+                                 ),
+                               ],
+                             ),
+                             const SizedBox(height: 6),
+                             TextField(
+                               controller: _addressController,
+                               maxLines: 2,
+                               textCapitalization: TextCapitalization.sentences,
+                               decoration: InputDecoration(
+                                 hintText: 'Enter delivery address',
+                                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                                 filled: true,
+                                 fillColor: Colors.grey[100],
+                                 border: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: BorderSide.none,
+                                 ),
+                                 enabledBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: BorderSide.none,
+                                 ),
+                                 focusedBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                                 ),
+                                 errorBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: const BorderSide(color: AppColors.error, width: 1),
+                                 ),
+                                 errorText: addressError,
+                               ),
+                               style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+                             ),
                             const SizedBox(height: 24),
 
-                            const Divider(color: AppColors.border),
+                            const Text(
+                              'Waktu Pengiriman',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _isScheduled = false;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: !_isScheduled ? AppColors.primary : AppColors.border,
+                                        width: !_isScheduled ? 1.5 : 1.0,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.flash_on,
+                                          color: AppColors.primary,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Expanded(
+                                          child: Text(
+                                            'Pesan Sekarang',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.textDark,
+                                            ),
+                                          ),
+                                        ),
+                                        Icon(
+                                          !_isScheduled ? Icons.radio_button_checked : Icons.radio_button_off,
+                                          color: !_isScheduled ? AppColors.primary : Colors.grey,
+                                          size: 20,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _isScheduled = true;
+                                    });
+                                    _selectDateTime();
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: _isScheduled ? AppColors.primary : AppColors.border,
+                                        width: _isScheduled ? 1.5 : 1.0,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.access_time,
+                                          color: AppColors.primary,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            _scheduledDateTime == null
+                                                ? 'Pilih Waktu Pengiriman'
+                                                : 'Pukul ${_scheduledDateTime!.hour.toString().padLeft(2, '0')}:${_scheduledDateTime!.minute.toString().padLeft(2, '0')}',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.textDark,
+                                            ),
+                                          ),
+                                        ),
+                                        const Icon(
+                                          Icons.arrow_forward_ios,
+                                          size: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                              const SizedBox(height: 24),
+
+                              const Divider(color: AppColors.border),
                             const SizedBox(height: 16),
 
                             Row(
@@ -509,27 +814,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           constraints: const BoxConstraints(maxWidth: 800),
                           child: SizedBox(
                             width: double.infinity,
-                            child: ElevatedButton(
+                            child: GradientButton(
                               onPressed: isBtnLoading
                                   ? null
                                   : () {
+                                      if (_isScheduled && _scheduledDateTime == null) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Silakan pilih tanggal dan waktu pengiriman.'),
+                                            backgroundColor: AppColors.error,
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                        return;
+                                      }
                                       _cubit.submitOrder(
                                         name: _nameController.text,
                                         phone: _phoneController.text,
                                         address: _addressController.text,
+                                        scheduledAt: _isScheduled ? _scheduledDateTime : null,
                                       );
                                     },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                elevation: 0,
-                              ),
+                              borderRadius: 12,
+                              height: 48,
                               child: isBtnLoading
                                   ? const SizedBox(
                                       height: 20,
@@ -539,11 +846,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Text(
-                                      'Order Now',
-                                      style: TextStyle(
+                                  : Text(
+                                      _isScheduled ? 'Schedule Order' : 'Order Now',
+                                      style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,
+                                        color: Colors.white,
                                       ),
                                     ),
                             ),

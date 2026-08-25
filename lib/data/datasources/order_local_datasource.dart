@@ -6,6 +6,8 @@ import 'menu_local_datasource.dart';
 abstract class OrderLocalDataSource {
   Future<void> createOrder(OrderEntity order);
   Future<List<OrderEntity>> getOrders();
+  Future<void> updateOrder(OrderEntity order);
+  Future<void> deleteOrder(String id);
 }
 
 class OrderLocalDataSourceImpl implements OrderLocalDataSource {
@@ -255,5 +257,20 @@ class OrderLocalDataSourceImpl implements OrderLocalDataSource {
   @override
   Future<List<OrderEntity>> getOrders() async {
     return List.from(_orders);
+  }
+
+  @override
+  Future<void> updateOrder(OrderEntity order) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final idx = _orders.indexWhere((o) => o.id == order.id);
+    if (idx != -1) {
+      _orders[idx] = order;
+    }
+  }
+
+  @override
+  Future<void> deleteOrder(String id) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    _orders.removeWhere((o) => o.id == id);
   }
 }
