@@ -26,7 +26,7 @@ class MenuPage extends StatefulWidget {
 
 class _MenuPageState extends State<MenuPage> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isGridView = true;
+  bool _isGridView = false;
 
   @override
   void initState() {
@@ -158,13 +158,13 @@ class _MenuPageState extends State<MenuPage> {
                                         children: [
                                           BannerCarousel(
                                             items: (() {
-                                              final promoItems = menuState.menuItems
+                                              final promoItems = menuState.allMenuItems
                                                   .where((item) =>
                                                       item.originalPrice != null &&
                                                       item.originalPrice! > item.price)
                                                   .toList();
                                               if (promoItems.length <= 1) {
-                                                final recommended = menuState.menuItems
+                                                final recommended = menuState.allMenuItems
                                                     .where((item) => item.isRecommended)
                                                     .toList();
                                                 for (final item in recommended) {
@@ -174,7 +174,7 @@ class _MenuPageState extends State<MenuPage> {
                                                 }
                                               }
                                               if (promoItems.isEmpty) {
-                                                return menuState.menuItems.take(3).toList();
+                                                return menuState.allMenuItems.take(3).toList();
                                               }
                                               return promoItems;
                                             })(),

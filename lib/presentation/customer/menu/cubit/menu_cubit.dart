@@ -18,6 +18,7 @@ class MenuCubit extends Cubit<MenuState> {
         MenuLoaded(
           categories: categories,
           menuItems: items,
+          allMenuItems: items,
           recommendedItems: recommended,
           selectedCategoryId: 'All',
           searchQuery: '',

@@ -16,6 +16,7 @@ class MenuLoading extends MenuState {}
 class MenuLoaded extends MenuState {
   final List<MenuCategory> categories;
   final List<MenuItem> menuItems;
+  final List<MenuItem> allMenuItems;
   final List<MenuItem> recommendedItems;
   final String selectedCategoryId; // 'All' or specific id
   final String searchQuery;
@@ -24,6 +25,7 @@ class MenuLoaded extends MenuState {
   const MenuLoaded({
     required this.categories,
     required this.menuItems,
+    required this.allMenuItems,
     required this.recommendedItems,
     this.selectedCategoryId = 'All',
     this.searchQuery = '',
@@ -34,6 +36,7 @@ class MenuLoaded extends MenuState {
   List<Object?> get props => [
     categories,
     menuItems,
+    allMenuItems,
     recommendedItems,
     selectedCategoryId,
     searchQuery,
@@ -43,6 +46,7 @@ class MenuLoaded extends MenuState {
   MenuLoaded copyWith({
     List<MenuCategory>? categories,
     List<MenuItem>? menuItems,
+    List<MenuItem>? allMenuItems,
     List<MenuItem>? recommendedItems,
     String? selectedCategoryId,
     String? searchQuery,
@@ -51,6 +55,7 @@ class MenuLoaded extends MenuState {
     return MenuLoaded(
       categories: categories ?? this.categories,
       menuItems: menuItems ?? this.menuItems,
+      allMenuItems: allMenuItems ?? this.allMenuItems,
       recommendedItems: recommendedItems ?? this.recommendedItems,
       selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
       searchQuery: searchQuery ?? this.searchQuery,
