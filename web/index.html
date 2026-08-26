@@ -31,6 +31,34 @@
 
   <title>Jajanan by Lemakin</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* Force initial loading indicators and progress bars to orange (#FF6500) */
+    progress {
+      accent-color: #FF6500 !important;
+    }
+    progress::-webkit-progress-value {
+      background-color: #FF6500 !important;
+    }
+    progress::-moz-progress-bar {
+      background-color: #FF6500 !important;
+    }
+    div[role="progressbar"],
+    .progress,
+    .progress-bar,
+    .progress-bar-fill,
+    .progress-fill,
+    .flutter-loader,
+    .loader,
+    .loading,
+    .dwds-progress,
+    .dwds-loading,
+    #loading-indicator,
+    #loading {
+      background-color: #FF6500 !important;
+      color: #FF6500 !important;
+      border-top-color: #FF6500 !important;
+    }
+  </style>
 </head>
 <body>
   <!--

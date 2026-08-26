@@ -13,6 +13,7 @@ import '../../cart/cubit/cart_cubit.dart';
 import '../../cart/cubit/cart_state.dart';
 import '../cubit/checkout_cubit.dart';
 import '../cubit/checkout_state.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -543,18 +544,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               builder: (context, cartState) {
                                 if (cartState is CartLoaded) {
                                   if (cartState.items.isEmpty) {
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 24.0,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          'No items in cart.',
-                                          style: TextStyle(
-                                            color: AppColors.textSecondary,
-                                          ),
-                                        ),
-                                      ),
+                                    return const AppEmptyState(
+                                      title: 'No items in cart',
+                                      subtitle: 'Go back to the menu and add some dishes.',
                                     );
                                   }
 

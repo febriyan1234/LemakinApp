@@ -17,6 +17,7 @@ import '../widget/banner_carousel.dart';
 import '../widget/category_chips.dart';
 import '../widget/menu_card.dart';
 import '../widget/floating_cart_widget.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 
 class MenuPage extends StatefulWidget {
   const MenuPage({super.key});
@@ -98,420 +99,535 @@ class _MenuPageState extends State<MenuPage> {
                     builder: (context, menuState) {
                       if (menuState is MenuLoading) {
                         return const Center(
-                          child: AppLoadingIndicator(
-                            width: 120,
-                            height: 120,
-                          ),
+                          child: AppLoadingIndicator(width: 120, height: 120),
                         );
                       } else if (menuState is MenuError) {
-                        return Center(
-                          child: Text(
-                            'Error: ${menuState.message}',
-                            style: const TextStyle(color: AppColors.error),
+                        return RefreshIndicator(
+                          color: AppColors.primary,
+                          onRefresh: () async {
+                            await context.read<MenuCubit>().fetchMenu();
+                          },
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.height - 100,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Error: ${menuState.message}',
+                                      style: const TextStyle(
+                                        color: AppColors.error,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          context.read<MenuCubit>().fetchMenu(),
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         );
                       } else if (menuState is MenuLoaded) {
-                        return CustomScrollView(
-                          slivers: [
-                            // 1. Banner Carousel with overlapping logo & status (scrolls away)
-                            SliverToBoxAdapter(
-                              child: StreamBuilder<DocumentSnapshot>(
-                                stream: StoreStatusHelper.stream,
-                                builder: (context, storeSnapshot) {
-                                  String restaurantName = StoreStatusHelper.initialRestaurantName;
-                                  String? logoUrl = StoreStatusHelper.initialLogoUrl;
-                                  bool isShopOpen = true;
-                                  bool isClosedTemporarily = false;
-                                  DateTime? closedUntil;
+                        return StreamBuilder<DocumentSnapshot>(
+                          stream: StoreStatusHelper.stream,
+                          builder: (context, storeSnapshot) {
+                            String restaurantName =
+                                StoreStatusHelper.initialRestaurantName;
+                            String? logoUrl = StoreStatusHelper.initialLogoUrl;
+                            bool isShopOpen = true;
+                            bool isClosedTemporarily = false;
+                            DateTime? closedUntil;
+                            String openingTime = '09:00';
+                            String closingTime = '22:00';
 
-                                  if (storeSnapshot.hasData && storeSnapshot.data!.exists) {
-                                    final sData = storeSnapshot.data!.data() as Map<String, dynamic>?;
-                                    if (sData != null) {
-                                      restaurantName = sData['restaurantName'] as String? ?? StoreStatusHelper.initialRestaurantName;
-                                      logoUrl = sData['logoUrl'] as String? ?? StoreStatusHelper.initialLogoUrl;
-                                      isShopOpen = sData['isShopOpen'] as bool? ?? true;
-                                      isClosedTemporarily = sData['isClosedTemporarily'] as bool? ?? false;
-                                      if (sData['closedUntil'] != null) {
-                                        closedUntil = DateTime.tryParse(sData['closedUntil'] as String);
-                                      }
-                                    }
-                                  }
+                            if (storeSnapshot.hasData &&
+                                storeSnapshot.data!.exists) {
+                              final sData =
+                                  storeSnapshot.data!.data()
+                                      as Map<String, dynamic>?;
+                              if (sData != null) {
+                                restaurantName =
+                                    sData['restaurantName'] as String? ??
+                                    StoreStatusHelper.initialRestaurantName;
+                                logoUrl =
+                                    sData['logoUrl'] as String? ??
+                                    StoreStatusHelper.initialLogoUrl;
+                                isShopOpen =
+                                    sData['isShopOpen'] as bool? ?? true;
+                                isClosedTemporarily =
+                                    sData['isClosedTemporarily'] as bool? ??
+                                    false;
+                                if (sData['closedUntil'] != null) {
+                                  closedUntil = DateTime.tryParse(
+                                    sData['closedUntil'] as String,
+                                  );
+                                }
+                                openingTime =
+                                    sData['openingTime'] as String? ?? '09:00';
+                                closingTime =
+                                    sData['closingTime'] as String? ?? '22:00';
+                              }
+                            }
 
-                                  // Check if temp closed has expired
-                                  if (isClosedTemporarily &&
-                                      closedUntil != null &&
-                                      closedUntil.isBefore(DateTime.now())) {
-                                    isClosedTemporarily = false;
-                                    closedUntil = null;
-                                  }
+                            // Check if temp closed has expired
+                            if (isClosedTemporarily &&
+                                closedUntil != null &&
+                                closedUntil.isBefore(DateTime.now())) {
+                              isClosedTemporarily = false;
+                              closedUntil = null;
+                            }
 
-                                  final isCurrentlyClosed = !isShopOpen ||
-                                      (isClosedTemporarily &&
-                                          closedUntil != null &&
-                                          closedUntil.isAfter(DateTime.now()));
+                            bool isWithinOperatingHours = true;
+                            try {
+                              final openParts = openingTime.split(':');
+                              final closeParts = closingTime.split(':');
+                              if (openParts.length == 2 &&
+                                  closeParts.length == 2) {
+                                final openHour = int.parse(openParts[0]);
+                                final openMin = int.parse(openParts[1]);
+                                final closeHour = int.parse(closeParts[0]);
+                                final closeMin = int.parse(closeParts[1]);
 
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      // Banner Carousel with overlapping logo
-                                      Stack(
-                                        clipBehavior: Clip.none,
-                                        alignment: Alignment.bottomCenter,
-                                        children: [
-                                          BannerCarousel(
-                                            items: (() {
-                                              final promoItems = menuState.allMenuItems
-                                                  .where((item) =>
-                                                      item.isActive &&
-                                                      item.originalPrice != null &&
-                                                      item.originalPrice! > item.price)
-                                                  .toList();
-                                              if (promoItems.length <= 1) {
-                                                final recommended = menuState.allMenuItems
-                                                    .where((item) => item.isRecommended && item.isActive)
+                                final now = DateTime.now();
+                                final currentMinutes =
+                                    now.hour * 60 + now.minute;
+                                final openMinutes = openHour * 60 + openMin;
+                                final closeMinutes = closeHour * 60 + closeMin;
+
+                                if (closeMinutes >= openMinutes) {
+                                  isWithinOperatingHours =
+                                      currentMinutes >= openMinutes &&
+                                      currentMinutes < closeMinutes;
+                                } else {
+                                  isWithinOperatingHours =
+                                      currentMinutes >= openMinutes ||
+                                      currentMinutes < closeMinutes;
+                                }
+                              }
+                            } catch (_) {
+                              isWithinOperatingHours = true;
+                            }
+
+                            final isCurrentlyClosed =
+                                !isShopOpen ||
+                                !isWithinOperatingHours ||
+                                (isClosedTemporarily &&
+                                    closedUntil != null &&
+                                    closedUntil.isAfter(DateTime.now()));
+
+                            return RefreshIndicator(
+                              color: AppColors.primary,
+                              onRefresh: () async {
+                                await context.read<MenuCubit>().refreshMenu();
+                              },
+                              child: CustomScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                slivers: [
+                                  // 1. Banner Carousel with overlapping logo & status (scrolls away)
+                                  SliverToBoxAdapter(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        // Banner Carousel with overlapping logo
+                                        Stack(
+                                          clipBehavior: Clip.none,
+                                          alignment: Alignment.bottomCenter,
+                                          children: [
+                                            BannerCarousel(
+                                              isClosed: isCurrentlyClosed,
+                                              items: (() {
+                                                final promoItems = menuState
+                                                    .allMenuItems
+                                                    .where(
+                                                      (item) =>
+                                                          item.isActive &&
+                                                          item.stock != 0 &&
+                                                          item.originalPrice !=
+                                                              null &&
+                                                          item.originalPrice! >
+                                                              item.price,
+                                                    )
                                                     .toList();
-                                                for (final item in recommended) {
-                                                  if (!promoItems.any((promo) => promo.id == item.id)) {
-                                                    promoItems.add(item);
+
+                                                if (promoItems.length <= 1) {
+                                                  final activeRecs = menuState
+                                                      .allMenuItems
+                                                      .where(
+                                                        (item) =>
+                                                            item.isRecommended &&
+                                                            item.isActive &&
+                                                            item.stock != 0,
+                                                      )
+                                                      .toList();
+                                                  for (final item
+                                                      in activeRecs) {
+                                                    if (!promoItems.any(
+                                                      (promo) =>
+                                                          promo.id == item.id,
+                                                    )) {
+                                                      promoItems.add(item);
+                                                    }
                                                   }
                                                 }
-                                              }
-                                              if (promoItems.isEmpty) {
-                                                return menuState.allMenuItems.where((item) => item.isActive).take(3).toList();
-                                              }
-                                              return promoItems;
-                                            })(),
-                                            onTap: (item) => _handleItemTap(context, item),
-                                          ),
-                                          Positioned(
-                                            bottom: -32,
-                                            child: Container(
-                                              width: 72,
-                                              height: 72,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                shape: BoxShape.circle,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withValues(alpha: 0.1),
-                                                    blurRadius: 8,
-                                                    offset: const Offset(0, 4),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(4.0),
-                                                child: ClipOval(
-                                                  child: Container(
-                                                    color: Colors.white,
-                                                    padding: const EdgeInsets.all(4.0),
-                                                    child: logoUrl.isNotEmpty
-                                                        ? Image.network(
-                                                            logoUrl,
-                                                            fit: BoxFit.contain,
-                                                            errorBuilder: (context, error, stackTrace) => Image.asset(
-                                                              'assets/images/logo.png',
-                                                              fit: BoxFit.contain,
-                                                            ),
-                                                          )
-                                                        : Image.asset(
-                                                            'assets/images/logo.png',
-                                                            fit: BoxFit.contain,
+                                                return promoItems;
+                                              })(),
+                                              onTap: (item) =>
+                                                  _handleItemTap(context, item),
+                                            ),
+                                            Positioned(
+                                              bottom: -32,
+                                              child: Container(
+                                                width: 72,
+                                                height: 72,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black
+                                                          .withValues(
+                                                            alpha: 0.1,
                                                           ),
+                                                      blurRadius: 8,
+                                                      offset: const Offset(
+                                                        0,
+                                                        4,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(
+                                                    4.0,
+                                                  ),
+                                                  child: ClipOval(
+                                                    child: Container(
+                                                      color: Colors.white,
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            4.0,
+                                                          ),
+                                                      child: logoUrl.isNotEmpty
+                                                          ? Image.network(
+                                                              logoUrl,
+                                                              fit: BoxFit
+                                                                  .contain,
+                                                              errorBuilder:
+                                                                  (
+                                                                    context,
+                                                                    error,
+                                                                    stackTrace,
+                                                                  ) => Image.asset(
+                                                                    'assets/images/logo.png',
+                                                                    fit: BoxFit
+                                                                        .contain,
+                                                                  ),
+                                                            )
+                                                          : Image.asset(
+                                                              'assets/images/logo.png',
+                                                              fit: BoxFit
+                                                                  .contain,
+                                                            ),
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 44),
-                                      
-                                      Text(
-                                        restaurantName,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textDark,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: isCurrentlyClosed
-                                              ? AppColors.error.withValues(alpha: 0.1)
-                                              : AppColors.success.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(
-                                            color: isCurrentlyClosed
-                                                ? AppColors.error.withValues(alpha: 0.2)
-                                                : AppColors.success.withValues(alpha: 0.2),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              isCurrentlyClosed ? Icons.cancel : Icons.check_circle,
-                                              color: isCurrentlyClosed ? AppColors.error : AppColors.success,
-                                              size: 16,
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              isCurrentlyClosed
-                                                  ? (isClosedTemporarily && closedUntil != null
-                                                      ? 'Temporarily Closed until ${closedUntil.hour.toString().padLeft(2, '0')}:${closedUntil.minute.toString().padLeft(2, '0')}'
-                                                      : 'Outlet is Closed')
-                                                  : 'Outlet Open - Accepting Orders',
-                                              style: TextStyle(
-                                                color: isCurrentlyClosed ? AppColors.error : AppColors.success,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ),
+                                        const SizedBox(height: 44),
 
-                            // 2. Sticky Header: Search Bar + Chips & Toggle (pinned)
-                            SliverPersistentHeader(
-                              pinned: true,
-                              delegate: _StickyHeaderDelegate(
-                                height: 135.0,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16.0,
-                                        vertical: 8.0,
-                                      ),
-                                      child: TextField(
-                                        controller: _searchController,
-                                        onChanged: (val) {
-                                          context.read<MenuCubit>().searchMenu(
-                                            val,
-                                          );
-                                        },
-                                        decoration: InputDecoration(
-                                          hintText: 'Search menus...',
-                                          prefixIcon: const Icon(
-                                            Icons.search,
-                                            color: AppColors.grey500,
-                                          ),
-                                          suffixIcon:
-                                              _searchController.text.isNotEmpty
-                                              ? IconButton(
-                                                  icon: const Icon(Icons.clear),
-                                                  onPressed: () {
-                                                    _searchController.clear();
-                                                    context
-                                                        .read<MenuCubit>()
-                                                        .searchMenu('');
-                                                  },
-                                                )
-                                              : null,
-                                          filled: true,
-                                          fillColor: Colors.white,
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(28),
-                                            borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
-                                          ),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(28),
-                                            borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(28),
-                                            borderSide: const BorderSide(color: AppColors.primary, width: 1),
+                                        Text(
+                                          restaurantName,
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textDark,
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: CategoryChips(
-                                            categories: menuState.categories,
-                                            selectedCategoryId:
-                                                menuState.selectedCategoryId,
-                                            onCategorySelected: (catId) {
-                                              context
-                                                  .read<MenuCubit>()
-                                                  .selectCategory(catId);
-                                            },
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 16,
                                           ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            right: 12.0,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 8,
                                           ),
-                                          child: CircleAvatar(
-                                            radius: 18,
-                                            backgroundColor:
-                                                AppColors.primarySoft,
-                                            child: IconButton(
-                                              icon: Icon(
-                                                _isGridView
-                                                    ? Icons.view_list
-                                                    : Icons.grid_view,
-                                                color: AppColors.primary,
+                                          decoration: BoxDecoration(
+                                            color: isCurrentlyClosed
+                                                ? AppColors.error.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : AppColors.success.withValues(
+                                                    alpha: 0.1,
+                                                  ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            border: Border.all(
+                                              color: isCurrentlyClosed
+                                                  ? AppColors.error.withValues(
+                                                      alpha: 0.2,
+                                                    )
+                                                  : AppColors.success
+                                                        .withValues(alpha: 0.2),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                isCurrentlyClosed
+                                                    ? Icons.cancel
+                                                    : Icons.check_circle,
+                                                color: isCurrentlyClosed
+                                                    ? AppColors.error
+                                                    : AppColors.success,
                                                 size: 16,
                                               ),
-                                              onPressed: () {
-                                                setState(() {
-                                                  _isGridView = !_isGridView;
-                                                });
-                                              },
-                                              padding: EdgeInsets.zero,
-                                            ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                isCurrentlyClosed
+                                                    ? (!isShopOpen
+                                                          ? 'Outlet is Closed'
+                                                          : (!isWithinOperatingHours
+                                                                ? 'Closed (Outside Operating Hours)'
+                                                                : (isClosedTemporarily &&
+                                                                          closedUntil !=
+                                                                              null
+                                                                      ? 'Temporarily Closed until ${closedUntil.hour.toString().padLeft(2, '0')}:${closedUntil.minute.toString().padLeft(2, '0')}'
+                                                                      : 'Outlet is Closed')))
+                                                    : 'Outlet Open - Accepting Orders',
+                                                style: TextStyle(
+                                                  color: isCurrentlyClosed
+                                                      ? AppColors.error
+                                                      : AppColors.success,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
+                                        const SizedBox(height: 16),
                                       ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                                  ),
 
-                            // 3. Recommended Section (only when All category selected)
-                            if (menuState.selectedCategoryId == 'All' &&
-                                menuState.searchQuery.isEmpty &&
-                                menuState.recommendedItems.isNotEmpty)
-                              SliverToBoxAdapter(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 16),
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 16.0,
-                                      ),
-                                      child: Text(
-                                        'Recommended Menu',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textDark,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    SizedBox(
-                                      height: 235,
-                                      child: ListView.builder(
-                                        scrollDirection: Axis.horizontal,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                        ),
-                                        itemCount:
-                                            menuState.recommendedItems.length,
-                                        itemBuilder: (context, index) {
-                                          final item =
-                                              menuState.recommendedItems[index];
-                                          return SizedBox(
-                                            width: 175,
-                                            child:
-                                                BlocBuilder<
-                                                  CartCubit,
-                                                  CartState
-                                                >(
-                                                  builder: (context, cartState) {
-                                                    final qty = context
-                                                        .read<CartCubit>()
-                                                        .getItemQuantityInCart(
-                                                          item.id,
-                                                        );
-                                                    return GestureDetector(
-                                                      onTap: () =>
-                                                          _handleItemTap(
-                                                            context,
-                                                            item,
-                                                          ),
-                                                      child: MenuCard(
-                                                        item: item,
-                                                        quantity: qty,
-                                                        onIncrement: () {
-                                                          context.read<CartCubit>().incrementCartItemQuantity(item.id);
-                                                        },
-                                                        onDecrement: () {
-                                                          context.read<CartCubit>().decrementCartItemQuantity(item.id);
-                                                        },
-                                                      ),
-                                                    );
-                                                  },
+                                  // 2. Sticky Header: Search Bar + Chips & Toggle (pinned)
+                                  SliverPersistentHeader(
+                                    pinned: true,
+                                    delegate: _StickyHeaderDelegate(
+                                      height: 135.0,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: TextField(
+                                              controller: _searchController,
+                                              onChanged: (val) {
+                                                context
+                                                    .read<MenuCubit>()
+                                                    .searchMenu(val);
+                                              },
+                                              decoration: InputDecoration(
+                                                hintText: 'Search menus...',
+                                                prefixIcon: const Icon(
+                                                  Icons.search,
+                                                  color: AppColors.grey500,
                                                 ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            // 4. Menu Items Section (shows shimmers only here if loading)
-                            SliverToBoxAdapter(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (menuState.isLoading)
-                                    _buildLoadingShimmer()
-                                  else if (menuState.selectedCategoryId ==
-                                      'All') ...[
-                                    ...menuState.categories.map((category) {
-                                      final categoryItems = menuState.menuItems
-                                          .where(
-                                            (item) =>
-                                                item.categoryId == category.id,
-                                          )
-                                          .toList();
-                                      if (categoryItems.isEmpty)
-                                        return const SizedBox.shrink();
-                                      return _buildCategorySection(
-                                        context,
-                                        category.name,
-                                        categoryItems,
-                                      );
-                                    }),
-                                  ] else ...[
-                                    if (menuState.menuItems.isEmpty)
-                                      const Center(
-                                        child: Padding(
-                                          padding: EdgeInsets.all(48.0),
-                                          child: Text(
-                                            'No items found.',
-                                            style: TextStyle(
-                                              color: AppColors.textSecondary,
+                                                suffixIcon:
+                                                    _searchController
+                                                        .text
+                                                        .isNotEmpty
+                                                    ? IconButton(
+                                                        icon: const Icon(
+                                                          Icons.clear,
+                                                        ),
+                                                        onPressed: () {
+                                                          _searchController
+                                                              .clear();
+                                                          context
+                                                              .read<MenuCubit>()
+                                                              .searchMenu('');
+                                                        },
+                                                      )
+                                                    : null,
+                                                filled: true,
+                                                fillColor: Colors.white,
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 20,
+                                                      vertical: 12,
+                                                    ),
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(28),
+                                                  borderSide: BorderSide(
+                                                    color: Colors.grey[200]!,
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                enabledBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            28,
+                                                          ),
+                                                      borderSide: BorderSide(
+                                                        color:
+                                                            Colors.grey[200]!,
+                                                        width: 1,
+                                                      ),
+                                                    ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            28,
+                                                          ),
+                                                      borderSide:
+                                                          const BorderSide(
+                                                            color: AppColors
+                                                                .primary,
+                                                            width: 1,
+                                                          ),
+                                                    ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      )
-                                    else
-                                      _buildCategorySection(
-                                        context,
-                                        menuState.categories
-                                            .firstWhere(
-                                              (cat) =>
-                                                  cat.id ==
-                                                  menuState.selectedCategoryId,
-                                            )
-                                            .name,
-                                        menuState.menuItems,
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: CategoryChips(
+                                                  categories:
+                                                      menuState.categories,
+                                                  selectedCategoryId: menuState
+                                                      .selectedCategoryId,
+                                                  onCategorySelected: (catId) {
+                                                    context
+                                                        .read<MenuCubit>()
+                                                        .selectCategory(catId);
+                                                  },
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  right: 12.0,
+                                                ),
+                                                child: CircleAvatar(
+                                                  radius: 18,
+                                                  backgroundColor:
+                                                      AppColors.primarySoft,
+                                                  child: IconButton(
+                                                    icon: Icon(
+                                                      _isGridView
+                                                          ? Icons.view_list
+                                                          : Icons.grid_view,
+                                                      color: AppColors.primary,
+                                                      size: 16,
+                                                    ),
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        _isGridView =
+                                                            !_isGridView;
+                                                      });
+                                                    },
+                                                    padding: EdgeInsets.zero,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
+                                    ),
+                                  ),
+
+                                  // 3. Recommended Section (only when All category selected)
+                                  if (menuState.selectedCategoryId == 'All' &&
+                                      menuState.searchQuery.isEmpty) ...[
+                                    _buildHorizontalRecommendedSection(
+                                      context,
+                                      menuState,
+                                      isCurrentlyClosed,
+                                    ),
                                   ],
-                                  const SizedBox(height: 100),
+                                  // 4. Menu Items Section (shows shimmers only here if loading)
+                                  SliverToBoxAdapter(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (menuState.isLoading)
+                                          _buildLoadingShimmer()
+                                        else if (menuState.selectedCategoryId ==
+                                            'All') ...[
+                                          ...menuState.categories.map((
+                                            category,
+                                          ) {
+                                            final categoryItems = menuState
+                                                .menuItems
+                                                .where(
+                                                  (item) =>
+                                                      item.categoryId ==
+                                                      category.id,
+                                                )
+                                                .toList();
+                                            if (categoryItems.isEmpty) {
+                                              return const SizedBox.shrink();
+                                            }
+                                            return _buildCategorySection(
+                                              context,
+                                              category.name,
+                                              categoryItems,
+                                              menuState.bestSellers,
+                                              isCurrentlyClosed,
+                                            );
+                                          }),
+                                        ] else ...[
+                                          if (menuState.menuItems.isEmpty)
+                                            const AppEmptyState(
+                                              title: 'No items found',
+                                              subtitle:
+                                                  'Try adjusting your search query or selecting a different category.',
+                                            )
+                                          else
+                                            _buildCategorySection(
+                                              context,
+                                              menuState.categories
+                                                  .firstWhere(
+                                                    (cat) =>
+                                                        cat.id ==
+                                                        menuState
+                                                            .selectedCategoryId,
+                                                  )
+                                                  .name,
+                                              menuState.menuItems,
+                                              menuState.bestSellers,
+                                              isCurrentlyClosed,
+                                            ),
+                                        ],
+                                        const SizedBox(height: 100),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
-                          ],
+                            );
+                          },
                         );
                       }
                       return const SizedBox.shrink();
@@ -547,19 +663,35 @@ class _MenuPageState extends State<MenuPage> {
     BuildContext context,
     String title,
     List<MenuItem> items,
+    List<MenuItem> bestSellers,
+    bool isClosed,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                width: 40,
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           _isGridView
@@ -575,6 +707,9 @@ class _MenuPageState extends State<MenuPage> {
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final item = items[index];
+                    final isBestSeller = bestSellers.any(
+                      (bs) => bs.id == item.id,
+                    );
                     return BlocBuilder<CartCubit, CartState>(
                       builder: (context, cartState) {
                         final qty = context
@@ -585,11 +720,35 @@ class _MenuPageState extends State<MenuPage> {
                           child: MenuCard(
                             item: item,
                             quantity: qty,
+                            isBestSeller: isBestSeller,
+                            isClosed: isClosed,
                             onIncrement: () {
-                              context.read<CartCubit>().incrementCartItemQuantity(item.id);
+                              final qty = context
+                                  .read<CartCubit>()
+                                  .getItemQuantityInCart(item.id);
+                              if (qty == 0) {
+                                if (item.variants.isNotEmpty) {
+                                  context.push('/menu/${item.id}');
+                                } else {
+                                  context.read<CartCubit>().addToCart(
+                                    CartItem(
+                                      id: item.id,
+                                      menuItem: item,
+                                      quantity: 1,
+                                      selectedVariants: const {},
+                                    ),
+                                  );
+                                }
+                              } else {
+                                context
+                                    .read<CartCubit>()
+                                    .incrementCartItemQuantity(item.id);
+                              }
                             },
                             onDecrement: () {
-                              context.read<CartCubit>().decrementCartItemQuantity(item.id);
+                              context
+                                  .read<CartCubit>()
+                                  .decrementCartItemQuantity(item.id);
                             },
                           ),
                         );
@@ -603,6 +762,9 @@ class _MenuPageState extends State<MenuPage> {
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final item = items[index];
+                    final isBestSeller = bestSellers.any(
+                      (bs) => bs.id == item.id,
+                    );
                     return BlocBuilder<CartCubit, CartState>(
                       builder: (context, cartState) {
                         final qty = context
@@ -610,7 +772,13 @@ class _MenuPageState extends State<MenuPage> {
                             .getItemQuantityInCart(item.id);
                         return GestureDetector(
                           onTap: () => _handleItemTap(context, item),
-                          child: _buildMenuListItem(context, item, qty),
+                          child: _buildMenuListItem(
+                            context,
+                            item,
+                            qty,
+                            isBestSeller,
+                            isClosed,
+                          ),
                         );
                       },
                     );
@@ -621,37 +789,35 @@ class _MenuPageState extends State<MenuPage> {
     );
   }
 
-  Widget _buildMenuListItem(BuildContext context, MenuItem item, int quantity) {
-    final card = Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
+  Widget _buildMenuListItem(
+    BuildContext context,
+    MenuItem item,
+    int quantity,
+    bool isBestSeller,
+    bool isClosed,
+  ) {
+    final cardContent = Padding(
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    item.imageUrl,
+                Image.network(
+                  item.imageUrl,
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey[200],
                     width: 80,
                     height: 80,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey[200],
-                      width: 80,
-                      height: 80,
-                      child: const Icon(
-                        Icons.broken_image,
-                        size: 30,
-                        color: Colors.grey,
-                      ),
+                    child: const Icon(
+                      Icons.broken_image,
+                      size: 30,
+                      color: Colors.grey,
                     ),
                   ),
                 ),
@@ -683,160 +849,208 @@ class _MenuPageState extends State<MenuPage> {
                   ),
               ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      if (item.isRecommended)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primarySoft,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'Recommended',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.description,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 4,
-                        children: [
-                          Text(
-                            CurrencyFormatter.format(item.price),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
+                    if (item.isRecommended)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Recommended',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
                           ),
-                          if (item.originalPrice != null && item.originalPrice! > item.price)
-                            Text(
-                              CurrencyFormatter.format(item.originalPrice!),
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.textLight,
-                                  decoration: TextDecoration.lineThrough,
-                              ),
-                            ),
-                        ],
+                        ),
+                      )
+                    else if (isBestSeller)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Best Seller',
+                          style: TextStyle(
+                            color: AppColors.success,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      if (!item.isActive)
-                        const Icon(Icons.block, size: 20, color: Colors.grey)
-                      else if (item.variants.isEmpty && quantity > 0)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                context.read<CartCubit>().decrementCartItemQuantity(item.id);
-                              },
-                              child: Container(
-                                width: 26,
-                                height: 26,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: AppColors.primary, width: 1.5),
-                                ),
-                                child: const Icon(
-                                  Icons.remove,
-                                  size: 14,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '$quantity',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () {
-                                context.read<CartCubit>().incrementCartItemQuantity(item.id);
-                              },
-                              child: Container(
-                                width: 26,
-                                height: 26,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.add,
-                                  size: 14,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      else if (quantity > 0)
-                        Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.primary, width: 1.5),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.description,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 4,
+                      children: [
+                        Text(
+                          CurrencyFormatter.format(item.price),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
                           ),
-                          alignment: Alignment.center,
-                          child: Text(
+                        ),
+                        if (item.originalPrice != null &&
+                            item.originalPrice! > item.price)
+                          Text(
+                            CurrencyFormatter.format(item.originalPrice!),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textLight,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (!item.isActive || isClosed)
+                      const Icon(Icons.block, size: 20, color: Colors.grey)
+                    else if (item.variants.isEmpty && quantity > 0)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              context
+                                  .read<CartCubit>()
+                                  .decrementCartItemQuantity(item.id);
+                            },
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primary,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.remove,
+                                size: 14,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
                             '$quantity',
                             style: const TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
                             ),
                           ),
-                        )
-                      else
-                        Container(
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              context
+                                  .read<CartCubit>()
+                                  .incrementCartItemQuantity(item.id);
+                            },
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (quantity > 0)
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$quantity',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () {
+                          if (item.variants.isNotEmpty) {
+                            // Item has variants — navigate to detail to choose
+                            context.push('/menu/${item.id}');
+                          } else {
+                            // No variants — add to cart directly
+                            context.read<CartCubit>().addToCart(
+                              CartItem(
+                                id: item.id,
+                                menuItem: item,
+                                quantity: 1,
+                                selectedVariants: const {},
+                              ),
+                            );
+                          }
+                        },
+                        child: Container(
                           width: 26,
                           height: 26,
                           decoration: BoxDecoration(
@@ -849,20 +1063,60 @@ class _MenuPageState extends State<MenuPage> {
                             color: AppColors.primary,
                           ),
                         ),
-                    ],
-                  ),
-                ],
-              ),
+                      ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
-    return item.isActive ? card : Opacity(opacity: 0.6, child: card);
+
+    final bool displayGrey = !item.isActive || isClosed;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: displayGrey
+            ? Opacity(
+                opacity: 0.6,
+                child: ColorFiltered(
+                  colorFilter: const ColorFilter.mode(
+                    Colors.grey,
+                    BlendMode.saturation,
+                  ),
+                  child: Card(
+                    margin: EdgeInsets.zero,
+                    elevation: 0,
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    color: Colors.white,
+                    child: cardContent,
+                  ),
+                ),
+              )
+            : Card(
+                margin: EdgeInsets.zero,
+                elevation: 0,
+                clipBehavior: Clip.antiAlias,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                color: Colors.white,
+                child: cardContent,
+              ),
+      ),
+    );
   }
 
   Future<void> _handleItemTap(BuildContext context, MenuItem item) async {
-    if (!item.isActive) {
+    if (!item.isActive || item.stock == 0) {
       return;
     }
     final cartCubit = context.read<CartCubit>();
@@ -882,18 +1136,7 @@ class _MenuPageState extends State<MenuPage> {
         await context.push('/menu/${item.id}');
       }
     } else {
-      if (matchingItems.isEmpty) {
-        await cartCubit.addToCart(
-          CartItem(
-            id: item.id,
-            menuItem: item,
-            quantity: 1,
-            selectedVariants: const {},
-          ),
-        );
-      } else {
-        await context.push('/menu/${item.id}');
-      }
+      await context.push('/menu/${item.id}');
     }
   }
 
@@ -1095,12 +1338,10 @@ class _MenuPageState extends State<MenuPage> {
                                       size: 22,
                                     ),
                                     onPressed: () {
-                                      context
-                                          .read<CartCubit>()
-                                          .updateQuantity(
-                                            cartItem.id,
-                                            cartItem.quantity + 1,
-                                          );
+                                      context.read<CartCubit>().updateQuantity(
+                                        cartItem.id,
+                                        cartItem.quantity + 1,
+                                      );
                                     },
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
@@ -1173,6 +1414,115 @@ class _MenuPageState extends State<MenuPage> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildHorizontalRecommendedSection(
+    BuildContext context,
+    MenuState state,
+    bool isClosed,
+  ) {
+    if (state is! MenuLoaded) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+    final activeRecommended = state.allMenuItems
+        .where((item) => item.isRecommended && item.isActive && item.stock != 0)
+        .toList();
+
+    if (activeRecommended.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recommended Menu',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  width: 40,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 255,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: activeRecommended.length,
+              itemBuilder: (context, index) {
+                final item = activeRecommended[index];
+                return SizedBox(
+                  width: 175,
+                  child: BlocBuilder<CartCubit, CartState>(
+                    builder: (context, cartState) {
+                      final qty = context
+                          .read<CartCubit>()
+                          .getItemQuantityInCart(item.id);
+                      return GestureDetector(
+                        onTap: () => _handleItemTap(context, item),
+                        child: MenuCard(
+                          item: item,
+                          quantity: qty,
+                          isClosed: isClosed,
+                          onIncrement: () {
+                            final qty = context
+                                .read<CartCubit>()
+                                .getItemQuantityInCart(item.id);
+                            if (qty == 0) {
+                              if (item.variants.isNotEmpty) {
+                                context.push('/menu/${item.id}');
+                              } else {
+                                context.read<CartCubit>().addToCart(
+                                  CartItem(
+                                    id: item.id,
+                                    menuItem: item,
+                                    quantity: 1,
+                                    selectedVariants: const {},
+                                  ),
+                                );
+                              }
+                            } else {
+                              context
+                                  .read<CartCubit>()
+                                  .incrementCartItemQuantity(item.id);
+                            }
+                          },
+                          onDecrement: () {
+                            context.read<CartCubit>().decrementCartItemQuantity(
+                              item.id,
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

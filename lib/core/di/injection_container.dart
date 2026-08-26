@@ -50,7 +50,7 @@ final GetIt sl = GetIt.instance;
 
 Future<void> init() async {
   // ----------------- Presentation: Cubits -----------------
-  sl.registerFactory(() => MenuCubit(getMenuUseCase: sl()));
+  sl.registerFactory(() => MenuCubit(getMenuUseCase: sl(), orderRepository: sl()));
 
   sl.registerLazySingleton(
     () => CartCubit(

@@ -20,6 +20,7 @@ import '../../../../core/utils/file_download_helper.dart'
 import '../../../../domain/entities/order.dart';
 import '../cubit/admin_reports_cubit.dart';
 import '../cubit/admin_reports_state.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 
 class IncomeReportsPage extends StatefulWidget {
   const IncomeReportsPage({super.key});
@@ -796,20 +797,9 @@ class _IncomeReportsPageState extends State<IncomeReportsPage> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(48.0),
-        child: Column(
-          children: [
-            Icon(Icons.receipt_long, size: 48, color: AppColors.textLight),
-            SizedBox(height: 16),
-            Text(
-              'No transactions found matching the selected filters.',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
+    return const AppEmptyState(
+      title: 'No transactions found',
+      subtitle: 'Try adjusting your filters or date range.',
     );
   }
 

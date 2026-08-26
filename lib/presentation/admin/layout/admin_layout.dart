@@ -20,7 +20,11 @@ class AdminLayout extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
   final String title;
 
-  const AdminLayout({super.key, required this.navigationShell, required this.title});
+  const AdminLayout({
+    super.key,
+    required this.navigationShell,
+    required this.title,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -182,10 +186,18 @@ class _AdminHeader extends StatelessWidget {
                   const CircleAvatar(
                     radius: 16,
                     backgroundColor: AppColors.primarySoft,
-                    child: Icon(Icons.person, color: AppColors.primary, size: 18),
+                    child: Icon(
+                      Icons.person,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 14,
+                    color: AppColors.textSecondary,
+                  ),
                 ],
               ),
             ),
@@ -308,7 +320,8 @@ class _SidebarContent extends StatelessWidget {
     bool isSettings = false,
   }) {
     // Determine active route
-    final bool isActive = !isLogout && !isSettings && navigationShell.currentIndex == index;
+    final bool isActive =
+        !isLogout && !isSettings && navigationShell.currentIndex == index;
     final activeColor = AppColors.primary;
     final inactiveColor = Colors.white70;
 
@@ -406,9 +419,11 @@ Future<void> _seedFirestoreData(BuildContext context) async {
       const MenuItem(
         id: 'item_katsu',
         name: 'Chicken Katsu',
-        description: 'Crispy chicken breast with savory tonkatsu sauce, cabbage salad and warm rice.',
+        description:
+            'Crispy chicken breast with savory tonkatsu sauce, cabbage salad and warm rice.',
         price: 35000,
-        imageUrl: 'https://images.unsplash.com/photo-1598515214211-89d3e73ae83b?q=80&w=600',
+        imageUrl:
+            'https://images.unsplash.com/photo-1598515214211-89d3e73ae83b?q=80&w=600',
         isRecommended: true,
         categoryId: 'cat_chicken',
         variants: [
@@ -418,8 +433,16 @@ Future<void> _seedFirestoreData(BuildContext context) async {
             isRequired: true,
             options: [
               VariantOption(id: 'opt_katsu_orig', name: 'Original Sauce'),
-              VariantOption(id: 'opt_katsu_spicy', name: 'Spicy Fire Sauce', additionalPrice: 3000),
-              VariantOption(id: 'opt_katsu_cheese', name: 'Cheese Dip Sauce', additionalPrice: 5000),
+              VariantOption(
+                id: 'opt_katsu_spicy',
+                name: 'Spicy Fire Sauce',
+                additionalPrice: 3000,
+              ),
+              VariantOption(
+                id: 'opt_katsu_cheese',
+                name: 'Cheese Dip Sauce',
+                additionalPrice: 5000,
+              ),
             ],
           ),
         ],
@@ -427,9 +450,11 @@ Future<void> _seedFirestoreData(BuildContext context) async {
       const MenuItem(
         id: 'item_teriyaki',
         name: 'Beef Teriyaki Rice Bowl',
-        description: 'Stir-fried sliced beef with sweet teriyaki sauce, onions, and sesame seeds over rice.',
+        description:
+            'Stir-fried sliced beef with sweet teriyaki sauce, onions, and sesame seeds over rice.',
         price: 42000,
-        imageUrl: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?q=80&w=600',
+        imageUrl:
+            'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?q=80&w=600',
         isRecommended: true,
         categoryId: 'cat_rice',
         variants: [
@@ -439,7 +464,11 @@ Future<void> _seedFirestoreData(BuildContext context) async {
             isRequired: true,
             options: [
               VariantOption(id: 'opt_teriyaki_reg', name: 'Regular'),
-              VariantOption(id: 'opt_teriyaki_large', name: 'Jumbo Beef Portion', additionalPrice: 12000),
+              VariantOption(
+                id: 'opt_teriyaki_large',
+                name: 'Jumbo Beef Portion',
+                additionalPrice: 12000,
+              ),
             ],
           ),
         ],
@@ -447,9 +476,11 @@ Future<void> _seedFirestoreData(BuildContext context) async {
       const MenuItem(
         id: 'item_spicy_ramen',
         name: 'Spicy Miso Ramen',
-        description: 'Noodles in spicy rich miso broth topped with egg, chashu chicken, corn and green onions.',
+        description:
+            'Noodles in spicy rich miso broth topped with egg, chashu chicken, corn and green onions.',
         price: 38000,
-        imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?q=80&w=600',
+        imageUrl:
+            'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?q=80&w=600',
         isRecommended: true,
         categoryId: 'cat_noodles',
         variants: [
@@ -459,8 +490,16 @@ Future<void> _seedFirestoreData(BuildContext context) async {
             isRequired: true,
             options: [
               VariantOption(id: 'opt_ramen_lvl1', name: 'Level 1 - Mild'),
-              VariantOption(id: 'opt_ramen_lvl3', name: 'Level 3 - Medium Spicy', additionalPrice: 2000),
-              VariantOption(id: 'opt_ramen_lvl5', name: 'Level 5 - Extreme Spicy', additionalPrice: 4000),
+              VariantOption(
+                id: 'opt_ramen_lvl3',
+                name: 'Level 3 - Medium Spicy',
+                additionalPrice: 2000,
+              ),
+              VariantOption(
+                id: 'opt_ramen_lvl5',
+                name: 'Level 5 - Extreme Spicy',
+                additionalPrice: 4000,
+              ),
             ],
           ),
         ],
@@ -468,9 +507,11 @@ Future<void> _seedFirestoreData(BuildContext context) async {
       const MenuItem(
         id: 'item_iced_tea',
         name: 'Iced Sweet Jasmine Tea',
-        description: 'Refreshing brewed jasmine green tea served chilled with pure sugar syrup.',
+        description:
+            'Refreshing brewed jasmine green tea served chilled with pure sugar syrup.',
         price: 8000,
-        imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=600',
+        imageUrl:
+            'https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=600',
         isRecommended: false,
         categoryId: 'cat_drink',
         variants: [
@@ -480,7 +521,11 @@ Future<void> _seedFirestoreData(BuildContext context) async {
             isRequired: false,
             options: [
               VariantOption(id: 'opt_tea_reg', name: 'Regular Size'),
-              VariantOption(id: 'opt_tea_jumbo', name: 'Jumbo Size', additionalPrice: 3000),
+              VariantOption(
+                id: 'opt_tea_jumbo',
+                name: 'Jumbo Size',
+                additionalPrice: 3000,
+              ),
             ],
           ),
         ],
@@ -517,11 +562,19 @@ Future<void> _seedFirestoreData(BuildContext context) async {
     }
 
     if (context.mounted) {
-      showAppToast(context, 'Firestore Database seeded successfully! Please refresh pages.', type: AppToastType.success);
+      showAppToast(
+        context,
+        'Firestore Database seeded successfully! Please refresh pages.',
+        type: AppToastType.success,
+      );
     }
   } catch (e) {
     if (context.mounted) {
-      showAppToast(context, 'Failed to seed database: $e', type: AppToastType.error);
+      showAppToast(
+        context,
+        'Failed to seed database: $e',
+        type: AppToastType.error,
+      );
     }
   }
 }
@@ -536,11 +589,16 @@ void _showLogoutConfirmDialog(BuildContext context) {
     builder: (dialogCtx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Confirm Logout'),
-      content: const Text('Are you sure you want to log out of the Admin session?'),
+      content: const Text(
+        'Are you sure you want to log out of the Admin session?',
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogCtx),
-          child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
         ),
         ElevatedButton(
           onPressed: () {
@@ -549,7 +607,9 @@ void _showLogoutConfirmDialog(BuildContext context) {
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.error,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           child: const Text('Logout'),
         ),
@@ -567,50 +627,58 @@ void _showProfileDialog(BuildContext context, String adminName) {
     backgroundColor: Colors.white,
     isScrollControlled: true,
     builder: (sheetCtx) {
-            final emailPrefix = adminName.toLowerCase().replaceAll(' ', '.');
-            final dynamicEmail = emailPrefix.contains('@') ? emailPrefix : '$emailPrefix@lemakin.com';
+      final emailPrefix = adminName.toLowerCase().replaceAll(' ', '.');
+      final dynamicEmail = emailPrefix.contains('@')
+          ? emailPrefix
+          : '$emailPrefix@lemakin.com';
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 24,
-                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+      return Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Bottom sheet drag handle indicator
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Bottom sheet drag handle indicator
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'My Profile',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const CircleAvatar(
-                    radius: 36,
-                    backgroundColor: AppColors.primarySoft,
-                    child: Icon(Icons.person, color: AppColors.primary, size: 40),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(adminName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const Text('Super Admin Role', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                  const SizedBox(height: 16),
-                  const Divider(color: AppColors.border),
-                  const SizedBox(height: 8),
-                  _buildProfileRow('Email', dynamicEmail),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'My Profile',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const CircleAvatar(
+              radius: 36,
+              backgroundColor: AppColors.primarySoft,
+              child: Icon(Icons.person, color: AppColors.primary, size: 40),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              adminName,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const Text(
+              'Super Admin Role',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: AppColors.border),
+            const SizedBox(height: 8),
+            _buildProfileRow('Email', dynamicEmail),
             _buildProfileRow('Permissions', 'All Access'),
             _buildProfileRow('Joined', 'August 2026'),
             const SizedBox(height: 24),
@@ -645,16 +713,16 @@ void _showSettingsDialog(BuildContext context) {
     isScrollControlled: true,
     builder: (sheetCtx) {
       return FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('settings').doc('store').get(),
-        builder: (context, snapshot) {
+        future: FirebaseFirestore.instance
+            .collection('settings')
+            .doc('store')
+            .get(),
+        builder: (builderCtx, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const SizedBox(
               height: 250,
               child: Center(
-                child: AppLoadingIndicator(
-                  width: 100,
-                  height: 100,
-                ),
+                child: AppLoadingIndicator(width: 100, height: 100),
               ),
             );
           }
@@ -665,19 +733,28 @@ void _showSettingsDialog(BuildContext context) {
           bool isClosedTemporarily = false;
           DateTime? closedUntil;
 
+          String openingTime = '09:00';
+          String closingTime = '22:00';
+
           if (snapshot.hasData && snapshot.data!.exists) {
             final sData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
-            restaurantName = sData['restaurantName'] as String? ?? 'Lemakin Restaurant';
+            restaurantName =
+                sData['restaurantName'] as String? ?? 'Lemakin Restaurant';
             logoUrl = sData['logoUrl'] as String? ?? '';
             isShopOpen = sData['isShopOpen'] as bool? ?? true;
-            isClosedTemporarily = sData['isClosedTemporarily'] as bool? ?? false;
+            isClosedTemporarily =
+                sData['isClosedTemporarily'] as bool? ?? false;
             if (sData['closedUntil'] != null) {
               closedUntil = DateTime.tryParse(sData['closedUntil'] as String);
             }
+            openingTime = sData['openingTime'] as String? ?? '09:00';
+            closingTime = sData['closingTime'] as String? ?? '22:00';
           }
 
           // Check if temp closed has expired
-          if (isClosedTemporarily && closedUntil != null && closedUntil.isBefore(DateTime.now())) {
+          if (isClosedTemporarily &&
+              closedUntil != null &&
+              closedUntil.isBefore(DateTime.now())) {
             isClosedTemporarily = false;
             closedUntil = null;
           }
@@ -688,7 +765,10 @@ void _showSettingsDialog(BuildContext context) {
             initialShopOpen: isShopOpen,
             initialClosedTemporarily: isClosedTemporarily,
             initialClosedUntil: closedUntil,
+            initialOpeningTime: openingTime,
+            initialClosingTime: closingTime,
             sheetCtx: sheetCtx,
+            parentCtx: context,
           );
         },
       );
@@ -702,7 +782,10 @@ class _SystemSettingsForm extends StatefulWidget {
   final bool initialShopOpen;
   final bool initialClosedTemporarily;
   final DateTime? initialClosedUntil;
+  final String initialOpeningTime;
+  final String initialClosingTime;
   final BuildContext sheetCtx;
+  final BuildContext parentCtx;
 
   const _SystemSettingsForm({
     required this.initialRestaurantName,
@@ -710,7 +793,10 @@ class _SystemSettingsForm extends StatefulWidget {
     required this.initialShopOpen,
     required this.initialClosedTemporarily,
     required this.initialClosedUntil,
+    required this.initialOpeningTime,
+    required this.initialClosingTime,
     required this.sheetCtx,
+    required this.parentCtx,
   });
 
   @override
@@ -720,6 +806,8 @@ class _SystemSettingsForm extends StatefulWidget {
 class _SystemSettingsFormState extends State<_SystemSettingsForm> {
   late TextEditingController nameController;
   late TextEditingController logoController;
+  late TextEditingController openingTimeController;
+  late TextEditingController closingTimeController;
   late bool isShopOpen;
   late bool isClosedTemporarily;
   DateTime? closedUntil;
@@ -730,6 +818,12 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
     super.initState();
     nameController = TextEditingController(text: widget.initialRestaurantName);
     logoController = TextEditingController(text: widget.initialLogoUrl);
+    openingTimeController = TextEditingController(
+      text: widget.initialOpeningTime,
+    );
+    closingTimeController = TextEditingController(
+      text: widget.initialClosingTime,
+    );
     isShopOpen = widget.initialShopOpen;
     isClosedTemporarily = widget.initialClosedTemporarily;
     closedUntil = widget.initialClosedUntil;
@@ -739,12 +833,49 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
   void dispose() {
     nameController.dispose();
     logoController.dispose();
+    openingTimeController.dispose();
+    closingTimeController.dispose();
     super.dispose();
+  }
+
+  Future<String?> _selectTime(
+    BuildContext context,
+    String initialTimeStr,
+  ) async {
+    TimeOfDay initialTime = const TimeOfDay(hour: 9, minute: 0);
+    try {
+      final parts = initialTimeStr.split(':');
+      if (parts.length == 2) {
+        initialTime = TimeOfDay(
+          hour: int.parse(parts[0]),
+          minute: int.parse(parts[1]),
+        );
+      }
+    } catch (_) {}
+
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(primary: AppColors.primary),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      return '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isTempClosedNow = isClosedTemporarily &&
+    final isTempClosedNow =
+        isClosedTemporarily &&
         closedUntil != null &&
         closedUntil!.isAfter(DateTime.now());
 
@@ -790,8 +921,13 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                 decoration: InputDecoration(
                   labelText: 'Restaurant Name',
                   labelStyle: const TextStyle(fontSize: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
               ),
             ),
@@ -847,8 +983,13 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                   labelText: 'Logo URL',
                   labelStyle: const TextStyle(fontSize: 12),
                   hintText: 'Paste logo image link...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
               ),
             ),
@@ -867,13 +1008,17 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
               subtitle: Text(
                 isShopOpen
                     ? (isTempClosedNow
-                        ? 'Outlet Temporarily Closed until ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil?.minute.toString().padLeft(2, '0')}'
-                        : 'Store is OPEN for orders')
+                          ? 'Outlet Temporarily Closed until ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil?.minute.toString().padLeft(2, '0')}'
+                          : 'Store is OPEN for orders')
                     : 'Store is CLOSED for orders',
                 style: TextStyle(
                   fontSize: 11,
-                  color: isTempClosedNow ? AppColors.error : AppColors.textSecondary,
-                  fontWeight: isTempClosedNow ? FontWeight.bold : FontWeight.normal,
+                  color: isTempClosedNow
+                      ? AppColors.error
+                      : AppColors.textSecondary,
+                  fontWeight: isTempClosedNow
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                 ),
               ),
               value: isShopOpen,
@@ -887,7 +1032,9 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                   }
                 });
               },
-              activeColor: isTempClosedNow ? AppColors.error : AppColors.success,
+              activeColor: isTempClosedNow
+                  ? AppColors.error
+                  : AppColors.success,
               contentPadding: EdgeInsets.zero,
             ),
 
@@ -964,41 +1111,69 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          _buildDurationChip(context, '15 Menit', 15, selectedMinutes == 15, (dt) {
-                            setState(() {
-                              isClosedTemporarily = true;
-                              closedUntil = dt;
-                              selectedMinutes = 15;
-                            });
-                          }),
-                          _buildDurationChip(context, '30 Menit', 30, selectedMinutes == 30, (dt) {
-                            setState(() {
-                              isClosedTemporarily = true;
-                              closedUntil = dt;
-                              selectedMinutes = 30;
-                            });
-                          }),
-                          _buildDurationChip(context, '1 Jam', 60, selectedMinutes == 60, (dt) {
-                            setState(() {
-                              isClosedTemporarily = true;
-                              closedUntil = dt;
-                              selectedMinutes = 60;
-                            });
-                          }),
-                          _buildDurationChip(context, '2 Jam', 120, selectedMinutes == 120, (dt) {
-                            setState(() {
-                              isClosedTemporarily = true;
-                              closedUntil = dt;
-                              selectedMinutes = 120;
-                            });
-                          }),
+                          _buildDurationChip(
+                            context,
+                            '15 Menit',
+                            15,
+                            selectedMinutes == 15,
+                            (dt) {
+                              setState(() {
+                                isClosedTemporarily = true;
+                                closedUntil = dt;
+                                selectedMinutes = 15;
+                              });
+                            },
+                          ),
+                          _buildDurationChip(
+                            context,
+                            '30 Menit',
+                            30,
+                            selectedMinutes == 30,
+                            (dt) {
+                              setState(() {
+                                isClosedTemporarily = true;
+                                closedUntil = dt;
+                                selectedMinutes = 30;
+                              });
+                            },
+                          ),
+                          _buildDurationChip(
+                            context,
+                            '1 Jam',
+                            60,
+                            selectedMinutes == 60,
+                            (dt) {
+                              setState(() {
+                                isClosedTemporarily = true;
+                                closedUntil = dt;
+                                selectedMinutes = 60;
+                              });
+                            },
+                          ),
+                          _buildDurationChip(
+                            context,
+                            '2 Jam',
+                            120,
+                            selectedMinutes == 120,
+                            (dt) {
+                              setState(() {
+                                isClosedTemporarily = true;
+                                closedUntil = dt;
+                                selectedMinutes = 120;
+                              });
+                            },
+                          ),
                           ChoiceChip(
                             label: Text(
                               'Custom',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: selectedMinutes == -1 ? Colors.white : AppColors.textDark,
-                                fontWeight: selectedMinutes == -1 ? FontWeight.bold : FontWeight.normal,
+                                color: selectedMinutes == -1
+                                    ? Colors.white
+                                    : AppColors.textDark,
+                                fontWeight: selectedMinutes == -1
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                             selected: selectedMinutes == -1,
@@ -1008,16 +1183,21 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                               side: BorderSide(
-                                color: selectedMinutes == -1 ? AppColors.primary : Colors.grey[300]!,
+                                color: selectedMinutes == -1
+                                    ? AppColors.primary
+                                    : Colors.grey[300]!,
                                 width: 1,
                               ),
                             ),
                             onSelected: (val) async {
                               if (val) {
-                                final TimeOfDay? pickedTime = await showTimePicker(
-                                  context: context,
-                                  initialTime: TimeOfDay.now(),
-                                );
+                                final TimeOfDay? pickedTime =
+                                    await showTimePicker(
+                                      context: context,
+                                      initialTime: TimeOfDay.now(),
+                                      initialEntryMode:
+                                          TimePickerEntryMode.inputOnly,
+                                    );
                                 if (pickedTime != null) {
                                   final now = DateTime.now();
                                   var targetDateTime = DateTime(
@@ -1028,7 +1208,9 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                                     pickedTime.minute,
                                   );
                                   if (targetDateTime.isBefore(now)) {
-                                    targetDateTime = targetDateTime.add(const Duration(days: 1));
+                                    targetDateTime = targetDateTime.add(
+                                      const Duration(days: 1),
+                                    );
                                   }
                                   setState(() {
                                     isClosedTemporarily = true;
@@ -1060,11 +1242,35 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
             Row(
               children: [
                 Expanded(
-                  child: _buildSettingField('Opening Time', '09:00'),
+                  child: _buildSettingField(
+                    'Opening Time',
+                    openingTimeController,
+                    onTap: () async {
+                      final time = await _selectTime(
+                        context,
+                        openingTimeController.text,
+                      );
+                      if (time != null) {
+                        openingTimeController.text = time;
+                      }
+                    },
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildSettingField('Closing Time', '22:00'),
+                  child: _buildSettingField(
+                    'Closing Time',
+                    closingTimeController,
+                    onTap: () async {
+                      final time = await _selectTime(
+                        context,
+                        closingTimeController.text,
+                      );
+                      if (time != null) {
+                        closingTimeController.text = time;
+                      }
+                    },
+                  ),
                 ),
               ],
             ),
@@ -1077,9 +1283,7 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                     height: 48,
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(widget.sheetCtx),
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                      ),
+                      style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
                       child: const Text('Cancel'),
                     ),
                   ),
@@ -1088,23 +1292,37 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                 Expanded(
                   child: GradientButton(
                     onPressed: () async {
-                      // Save to Firestore settings
-                      try {
-                        await FirebaseFirestore.instance.collection('settings').doc('store').set({
-                          'restaurantName': nameController.text.trim(),
-                          'logoUrl': logoController.text.trim(),
-                          'isShopOpen': isShopOpen,
-                          'isClosedTemporarily': isClosedTemporarily,
-                          'closedUntil': closedUntil?.toIso8601String(),
-                        }, SetOptions(merge: true));
+                      // Pop the bottom sheet first to prevent unmounting race conditions
+                      Navigator.pop(widget.sheetCtx);
 
-                        if (context.mounted) {
-                          Navigator.pop(widget.sheetCtx);
-                          showAppToast(context, 'Settings saved successfully!', type: AppToastType.success);
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection('settings')
+                            .doc('store')
+                            .set({
+                              'restaurantName': nameController.text.trim(),
+                              'logoUrl': logoController.text.trim(),
+                              'isShopOpen': isShopOpen,
+                              'isClosedTemporarily': isClosedTemporarily,
+                              'closedUntil': closedUntil?.toIso8601String(),
+                              'openingTime': openingTimeController.text.trim(),
+                              'closingTime': closingTimeController.text.trim(),
+                            }, SetOptions(merge: true));
+
+                        if (widget.parentCtx.mounted) {
+                          showAppToast(
+                            widget.parentCtx,
+                            'Settings saved successfully!',
+                            type: AppToastType.success,
+                          );
                         }
                       } catch (e) {
-                        if (context.mounted) {
-                          showAppToast(context, 'Failed to save settings: $e', type: AppToastType.error);
+                        if (widget.parentCtx.mounted) {
+                          showAppToast(
+                            widget.parentCtx,
+                            'Failed to save settings: $e',
+                            type: AppToastType.error,
+                          );
                         }
                       }
                     },
@@ -1136,7 +1354,7 @@ Widget _buildDurationChip(
 ) {
   return ChoiceChip(
     label: Text(
-      label, 
+      label,
       style: TextStyle(
         fontSize: 12,
         color: isSelected ? Colors.white : AppColors.textDark,
@@ -1163,30 +1381,45 @@ Widget _buildDurationChip(
   );
 }
 
-
 Widget _buildProfileRow(String label, String value) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 4.0),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        ),
       ],
     ),
   );
 }
 
-Widget _buildSettingField(String label, String initialValue) {
+Widget _buildSettingField(
+  String label,
+  TextEditingController controller, {
+  VoidCallback? onTap,
+}) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 6.0),
     child: TextFormField(
-      initialValue: initialValue,
+      controller: controller,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(fontSize: 12),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        suffixIcon: onTap != null
+            ? IconButton(
+                icon: const Icon(Icons.access_time, size: 18),
+                onPressed: onTap,
+              )
+            : null,
       ),
     ),
   );
@@ -1280,7 +1513,8 @@ class _AdminBottomNavBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: items.map((item) {
-              final bool isActive = !item.isAction && navigationShell.currentIndex == item.index;
+              final bool isActive =
+                  !item.isAction && navigationShell.currentIndex == item.index;
 
               return Expanded(
                 child: GestureDetector(
@@ -1290,7 +1524,8 @@ class _AdminBottomNavBar extends StatelessWidget {
                     } else {
                       navigationShell.goBranch(
                         item.index,
-                        initialLocation: item.index == navigationShell.currentIndex,
+                        initialLocation:
+                            item.index == navigationShell.currentIndex,
                       );
                     }
                   },
@@ -1307,7 +1542,9 @@ class _AdminBottomNavBar extends StatelessWidget {
                       children: [
                         Icon(
                           isActive ? item.activeIcon : item.icon,
-                          color: isActive ? Colors.white : AppColors.textSecondary,
+                          color: isActive
+                              ? Colors.white
+                              : AppColors.textSecondary,
                           size: 22,
                         ),
                         const SizedBox(height: 4),
@@ -1315,8 +1552,12 @@ class _AdminBottomNavBar extends StatelessWidget {
                           item.label,
                           style: TextStyle(
                             fontSize: 10,
-                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                            color: isActive ? Colors.white : AppColors.textSecondary,
+                            fontWeight: isActive
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isActive
+                                ? Colors.white
+                                : AppColors.textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1366,7 +1607,11 @@ class _AdminBottomNavBar extends StatelessWidget {
                     const CircleAvatar(
                       radius: 24,
                       backgroundColor: AppColors.primarySoft,
-                      child: Icon(Icons.person, color: AppColors.primary, size: 24),
+                      child: Icon(
+                        Icons.person,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -1399,8 +1644,14 @@ class _AdminBottomNavBar extends StatelessWidget {
                 // Actions
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.settings_outlined, color: AppColors.textDark),
-                  title: const Text('System Settings', style: TextStyle(fontSize: 14)),
+                  leading: const Icon(
+                    Icons.settings_outlined,
+                    color: AppColors.textDark,
+                  ),
+                  title: const Text(
+                    'System Settings',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   trailing: const Icon(Icons.chevron_right, size: 20),
                   onTap: () {
                     Navigator.pop(context); // Close bottom sheet
@@ -1409,8 +1660,14 @@ class _AdminBottomNavBar extends StatelessWidget {
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.person_outline, color: AppColors.textDark),
-                  title: const Text('My Profile', style: TextStyle(fontSize: 14)),
+                  leading: const Icon(
+                    Icons.person_outline,
+                    color: AppColors.textDark,
+                  ),
+                  title: const Text(
+                    'My Profile',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   trailing: const Icon(Icons.chevron_right, size: 20),
                   onTap: () {
                     Navigator.pop(context); // Close bottom sheet
@@ -1420,8 +1677,15 @@ class _AdminBottomNavBar extends StatelessWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.logout, color: AppColors.error),
-                  title: const Text('Logout', style: TextStyle(color: AppColors.error, fontSize: 14)),
-                  trailing: const Icon(Icons.chevron_right, size: 20, color: AppColors.error),
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(color: AppColors.error, fontSize: 14),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: AppColors.error,
+                  ),
                   onTap: () {
                     Navigator.pop(context); // Close bottom sheet
                     _showLogoutConfirmDialog(context);

@@ -8,6 +8,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../domain/entities/expense.dart';
 import '../cubit/admin_reports_cubit.dart';
 import '../cubit/admin_reports_state.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 
 class ExpenseReportsPage extends StatefulWidget {
   const ExpenseReportsPage({super.key});
@@ -499,20 +500,9 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(48.0),
-        child: Column(
-          children: [
-            Icon(Icons.receipt_long, size: 48, color: AppColors.textLight),
-            SizedBox(height: 16),
-            Text(
-              'No expenses found matching the selected filters.',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
+    return const AppEmptyState(
+      title: 'No expenses found',
+      subtitle: 'Try adjusting your filters or date range.',
     );
   }
 

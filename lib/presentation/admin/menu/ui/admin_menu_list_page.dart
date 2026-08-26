@@ -100,9 +100,15 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
             return LayoutBuilder(
               builder: (context, mainConstraints) {
                 final isMobile = mainConstraints.maxWidth < 650;
-                return SingleChildScrollView(
-                  padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
-                  child: Column(
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () async {
+                    await _cubit.refreshMenus();
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Capsule Tab Bar at the top (right below AppBar header)
@@ -140,9 +146,10 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                       ],
                     ],
                   ),
-                );
-              },
-            );
+                ),
+              );
+            },
+          );
           }
           return const SizedBox.shrink();
         },
@@ -1501,12 +1508,24 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
     int maxSelections = existingVariant?.maxSelections ?? 1;
     if (maxSelections < 1) maxSelections = 1;
 
-    int selectionValue = isRequired 
-        ? (minSelections > 0 ? minSelections : 1) 
-        : (maxSelections > 0 ? maxSelections : 1);
-    
-    String requiredSelectionType = (minSelections == maxSelections) ? 'Exactly' : 'At least';
-    final quantityController = TextEditingController(text: selectionValue.toString());
+    String requiredSelectionType = 'Exactly';
+    if (isEdit && isRequired) {
+      if (minSelections == maxSelections) {
+        requiredSelectionType = 'Exactly';
+      } else {
+        requiredSelectionType = 'Between';
+      }
+    }
+
+    final minQuantityController = TextEditingController(
+      text: (minSelections > 0 ? minSelections : 1).toString(),
+    );
+    final maxQuantityController = TextEditingController(
+      text: (maxSelections > 1 ? maxSelections : 2).toString(),
+    );
+    final optionalMaxQuantityController = TextEditingController(
+      text: (maxSelections > 0 ? maxSelections : 1).toString(),
+    );
 
     final List<Map<String, dynamic>> optionsData = [];
     if (isEdit) {
@@ -1532,10 +1551,6 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final int optionsCount = optionsData.length;
-            if (selectionValue > optionsCount && optionsCount > 0) {
-              selectionValue = optionsCount;
-              quantityController.text = selectionValue.toString();
-            }
 
             final bool isFormComplete = nameController.text.trim().isNotEmpty &&
                 optionsData.any((data) =>
@@ -1719,7 +1734,7 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                                         });
                                       }
                                     },
-                                    items: <String>['Exactly', 'At least'].map<DropdownMenuItem<String>>((String value) {
+                                    items: <String>['Exactly', 'Between'].map<DropdownMenuItem<String>>((String value) {
                                       return DropdownMenuItem<String>(
                                         value: value,
                                         child: Text(value),
@@ -1728,54 +1743,103 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Container(
-                                width: 70,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFCED4DA)),
-                                ),
-                                child: TextField(
-                                  controller: quantityController,
-                                  keyboardType: TextInputType.number,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Color(0xFF212529),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
+                              if (requiredSelectionType == 'Between') ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  width: 58,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFCED4DA)),
                                   ),
-                                  decoration: const InputDecoration(
-                                    filled: false,
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(vertical: 10),
-                                    isDense: true,
+                                  child: TextField(
+                                    controller: minQuantityController,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFF212529),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      filled: false,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                                      isDense: true,
+                                    ),
                                   ),
-                                  onChanged: (text) {
-                                    setDialogState(() {
-                                      if (text.isEmpty) return;
-                                      final val = int.tryParse(text);
-                                      if (val != null) {
-                                        final maxAllowed = optionsCount > 0 ? optionsCount : 99;
-                                        if (val < 1) {
-                                          selectionValue = 1;
-                                        } else if (val > maxAllowed) {
-                                          selectionValue = maxAllowed;
-                                          quantityController.text = maxAllowed.toString();
-                                          quantityController.selection = TextSelection.fromPosition(
-                                            TextPosition(offset: quantityController.text.length),
-                                          );
-                                        } else {
-                                          selectionValue = val;
-                                        }
-                                      }
-                                    });
-                                  },
                                 ),
-                              ),
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 6),
+                                  child: Text(
+                                    '-',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF495057),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: 58,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFCED4DA)),
+                                  ),
+                                  child: TextField(
+                                    controller: maxQuantityController,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFF212529),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      filled: false,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[
+                                const SizedBox(width: 12),
+                                Container(
+                                  width: 65,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFCED4DA)),
+                                  ),
+                                  child: TextField(
+                                    controller: minQuantityController,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFF212529),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      filled: false,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1832,7 +1896,7 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                                   border: Border.all(color: const Color(0xFFCED4DA)),
                                 ),
                                 child: TextField(
-                                  controller: quantityController,
+                                  controller: optionalMaxQuantityController,
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
@@ -1848,26 +1912,6 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                                     contentPadding: EdgeInsets.symmetric(vertical: 10),
                                     isDense: true,
                                   ),
-                                  onChanged: (text) {
-                                    setDialogState(() {
-                                      if (text.isEmpty) return;
-                                      final val = int.tryParse(text);
-                                      if (val != null) {
-                                        final maxAllowed = optionsCount > 0 ? optionsCount : 99;
-                                        if (val < 1) {
-                                          selectionValue = 1;
-                                        } else if (val > maxAllowed) {
-                                          selectionValue = maxAllowed;
-                                          quantityController.text = maxAllowed.toString();
-                                          quantityController.selection = TextSelection.fromPosition(
-                                            TextPosition(offset: quantityController.text.length),
-                                          );
-                                        } else {
-                                          selectionValue = val;
-                                        }
-                                      }
-                                    });
-                                  },
                                 ),
                               ),
                             ],
@@ -1912,28 +1956,25 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                       if (finalOptions.isEmpty) return;
 
                       final int finalOptionsCount = finalOptions.length;
-                      int finalSelectionValue = int.tryParse(quantityController.text.trim()) ?? selectionValue;
-                      if (finalSelectionValue > finalOptionsCount) {
-                        finalSelectionValue = finalOptionsCount;
-                      }
-                      if (finalSelectionValue < 1) {
-                        finalSelectionValue = 1;
-                      }
 
                       int finalMin = 0;
                       int finalMax = 1;
 
                       if (isRequired) {
+                        final int minVal = int.tryParse(minQuantityController.text.trim()) ?? 1;
+
                         if (requiredSelectionType == 'Exactly') {
-                          finalMin = finalSelectionValue;
-                          finalMax = finalSelectionValue;
-                        } else { // At least
-                          finalMin = finalSelectionValue;
-                          finalMax = finalOptionsCount;
+                          finalMin = minVal.clamp(1, finalOptionsCount);
+                          finalMax = finalMin;
+                        } else { // Between
+                          final int maxVal = int.tryParse(maxQuantityController.text.trim()) ?? (minVal + 1);
+                          finalMin = minVal.clamp(1, finalOptionsCount);
+                          finalMax = maxVal.clamp(finalMin, finalOptionsCount);
                         }
                       } else {
+                        final int upToVal = int.tryParse(optionalMaxQuantityController.text.trim()) ?? 1;
                         finalMin = 0;
-                        finalMax = finalSelectionValue;
+                        finalMax = upToVal.clamp(1, finalOptionsCount);
                       }
 
                       final MenuVariant newVariant = MenuVariant(

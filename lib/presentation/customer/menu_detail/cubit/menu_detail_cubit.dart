@@ -66,17 +66,70 @@ class MenuDetailCubit extends Cubit<MenuDetailState> {
     }
   }
 
-  void selectVariantOption(String variantName, VariantOption? option) {
+  void selectSingleVariantOption(String variantName, VariantOption? option) {
     final currentState = state;
     if (currentState is MenuDetailLoaded) {
       final newSelected = Map<String, VariantOption>.from(
         currentState.selectedVariants,
       );
-      if (option == null) {
-        newSelected.remove(variantName);
-      } else {
+      newSelected.removeWhere(
+        (k, v) => k == variantName || k.startsWith('$variantName:'),
+      );
+      if (option != null) {
         newSelected[variantName] = option;
       }
+      emit(
+        currentState.copyWith(selectedVariants: newSelected, clearError: true),
+      );
+    }
+  }
+
+  void toggleMultiVariantOption(
+    MenuVariant variant,
+    VariantOption option,
+    bool isSelected,
+  ) {
+    final currentState = state;
+    if (currentState is MenuDetailLoaded) {
+      final newSelected = Map<String, VariantOption>.from(
+        currentState.selectedVariants,
+      );
+      final key = '${variant.name}:${option.id}';
+
+      if (isSelected) {
+        final currentCount = newSelected.keys
+            .where((k) => k == variant.name || k.startsWith('${variant.name}:'))
+            .length;
+
+        if (variant.maxSelections > 0 && currentCount >= variant.maxSelections) {
+          emit(
+            currentState.copyWith(
+              validationError:
+                  'Maximum ${variant.maxSelections} options allowed for "${variant.name}"',
+            ),
+          );
+          return;
+        }
+        newSelected[key] = option;
+      } else {
+        newSelected.remove(key);
+      }
+
+      emit(
+        currentState.copyWith(selectedVariants: newSelected, clearError: true),
+      );
+    }
+  }
+
+  void clearVariantSelection(String variantName) {
+    final currentState = state;
+    if (currentState is MenuDetailLoaded) {
+      final newSelected = Map<String, VariantOption>.from(
+        currentState.selectedVariants,
+      );
+      newSelected.removeWhere(
+        (k, v) => k == variantName || k.startsWith('$variantName:'),
+      );
       emit(
         currentState.copyWith(selectedVariants: newSelected, clearError: true),
       );
@@ -89,11 +142,37 @@ class MenuDetailCubit extends Cubit<MenuDetailState> {
       final item = currentState.menuItem;
 
       for (final variant in item.variants) {
-        if (variant.isRequired &&
-            !currentState.selectedVariants.containsKey(variant.name)) {
+        final selectedForVariant = currentState.selectedVariants.entries
+            .where(
+              (e) =>
+                  e.key == variant.name ||
+                  e.key.startsWith('${variant.name}:'),
+            )
+            .map((e) => e.value)
+            .toList();
+
+        final minRequired = (variant.isRequired || variant.minSelections > 0)
+            ? (variant.minSelections > 0 ? variant.minSelections : 1)
+            : 0;
+
+        if (selectedForVariant.length < minRequired) {
+          final minText =
+              minRequired > 1 ? '$minRequired options' : 'an option';
           emit(
             currentState.copyWith(
-              validationError: 'Please select an option for "${variant.name}"',
+              validationError:
+                  'Please select at least $minText for "${variant.name}"',
+            ),
+          );
+          return false;
+        }
+
+        if (variant.maxSelections > 0 &&
+            selectedForVariant.length > variant.maxSelections) {
+          emit(
+            currentState.copyWith(
+              validationError:
+                  'Maximum ${variant.maxSelections} options allowed for "${variant.name}"',
             ),
           );
           return false;

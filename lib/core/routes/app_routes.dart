@@ -44,7 +44,7 @@ class AppRoutes {
   static const String adminExpenseEdit = '/admin/reports/expense/edit/:id';
 
   static final GoRouter router = GoRouter(
-    initialLocation: adminMenu,
+    initialLocation: menu,
     routes: [
       // ----------------- Customer Routes -----------------
       GoRoute(path: menu, builder: (context, state) => const MenuPage()),
@@ -90,10 +90,7 @@ class AppRoutes {
 
           return BlocProvider<AdminReportsCubit>(
             create: (_) => di.sl<AdminReportsCubit>(),
-            child: AdminLayout(
-              navigationShell: navigationShell,
-              title: title,
-            ),
+            child: AdminLayout(navigationShell: navigationShell, title: title),
           );
         },
         branches: [
@@ -144,9 +141,8 @@ class AppRoutes {
             routes: [
               GoRoute(
                 path: adminIncomeReports,
-                pageBuilder: (context, state) => const NoTransitionPage(
-                  child: IncomeReportsPage(),
-                ),
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: IncomeReportsPage()),
                 routes: [
                   GoRoute(
                     path: 'edit',
@@ -163,13 +159,13 @@ class AppRoutes {
             routes: [
               GoRoute(
                 path: adminExpenseReports,
-                pageBuilder: (context, state) => const NoTransitionPage(
-                  child: ExpenseReportsPage(),
-                ),
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage(child: ExpenseReportsPage()),
                 routes: [
                   GoRoute(
                     path: 'add',
-                    builder: (context, state) => const AdminAddEditExpensePage(),
+                    builder: (context, state) =>
+                        const AdminAddEditExpensePage(),
                   ),
                   GoRoute(
                     path: 'edit/:id',

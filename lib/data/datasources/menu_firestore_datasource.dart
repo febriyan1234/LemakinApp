@@ -7,12 +7,14 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
   final FirebaseFirestore _firestore;
 
   MenuFirestoreDataSourceImpl({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   @override
   Future<List<MenuCategory>> getCategories() async {
     final snapshot = await _firestore.collection('menu_categories').get();
-    final categories = snapshot.docs.map((doc) => _categoryFromMap(doc.data())).toList();
+    final categories = snapshot.docs
+        .map((doc) => _categoryFromMap(doc.data()))
+        .toList();
     categories.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
     return categories;
   }
@@ -38,12 +40,30 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
         .map((doc) => _menuItemFromMap(doc.data() as Map<String, dynamic>))
         .toList();
 
+    try {
+      final globalVariants = await getVariants();
+      final gMap = <String, MenuVariant>{};
+      for (final v in globalVariants) {
+        gMap[v.id] = v;
+        gMap[v.name] = v;
+      }
+      items = items.map((item) {
+        if (item.variants.isEmpty) return item;
+        final updatedVariants = item.variants.map((v) {
+          return gMap[v.id] ?? gMap[v.name] ?? v;
+        }).toList();
+        return item.copyWith(variants: updatedVariants);
+      }).toList();
+    } catch (_) {}
+
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final searchLower = searchQuery.toLowerCase().trim();
       items = items
-          .where((item) =>
-              item.name.toLowerCase().contains(searchLower) ||
-              item.description.toLowerCase().contains(searchLower))
+          .where(
+            (item) =>
+                item.name.toLowerCase().contains(searchLower) ||
+                item.description.toLowerCase().contains(searchLower),
+          )
           .toList();
     }
 
@@ -55,13 +75,30 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
   Future<MenuItem?> getMenuItemDetail(String id) async {
     final doc = await _firestore.collection('menu_items').doc(id).get();
     if (doc.exists && doc.data() != null) {
-      return _menuItemFromMap(doc.data()!);
+      final item = _menuItemFromMap(doc.data()!);
+      if (item.variants.isNotEmpty) {
+        try {
+          final globalVariants = await getVariants();
+          final gMap = <String, MenuVariant>{};
+          for (final v in globalVariants) {
+            gMap[v.id] = v;
+            gMap[v.name] = v;
+          }
+          final updatedVariants = item.variants.map((v) {
+            return gMap[v.id] ?? gMap[v.name] ?? v;
+          }).toList();
+          return item.copyWith(variants: updatedVariants);
+        } catch (_) {}
+      }
+      return item;
     }
     return null;
   }
 
   @override
-  Future<List<MenuItem>> getRecommendedItems({bool includeInactive = false}) async {
+  Future<List<MenuItem>> getRecommendedItems({
+    bool includeInactive = false,
+  }) async {
     Query query = _firestore
         .collection('menu_items')
         .where('isRecommended', isEqualTo: true);
@@ -69,7 +106,27 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
       query = query.where('isActive', isEqualTo: true);
     }
     final snapshot = await query.get();
-    return snapshot.docs.map((doc) => _menuItemFromMap(doc.data() as Map<String, dynamic>)).toList();
+    List<MenuItem> items = snapshot.docs
+        .map((doc) => _menuItemFromMap(doc.data() as Map<String, dynamic>))
+        .toList();
+
+    try {
+      final globalVariants = await getVariants();
+      final gMap = <String, MenuVariant>{};
+      for (final v in globalVariants) {
+        gMap[v.id] = v;
+        gMap[v.name] = v;
+      }
+      items = items.map((item) {
+        if (item.variants.isEmpty) return item;
+        final updatedVariants = item.variants.map((v) {
+          return gMap[v.id] ?? gMap[v.name] ?? v;
+        }).toList();
+        return item.copyWith(variants: updatedVariants);
+      }).toList();
+    } catch (_) {}
+
+    return items;
   }
 
   @override
@@ -85,7 +142,7 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
     await _firestore
         .collection('menu_items')
         .doc(item.id)
-        .update(_menuItemToMap(item));
+        .set(_menuItemToMap(item), SetOptions(merge: true));
   }
 
   @override
@@ -133,12 +190,51 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
     await _firestore
         .collection('menu_variants')
         .doc(variant.id)
-        .update(_variantToMap(variant));
+        .set(_variantToMap(variant));
+
+    try {
+      final itemsSnapshot = await _firestore.collection('menu_items').get();
+      for (final doc in itemsSnapshot.docs) {
+        final data = doc.data();
+        final variantsRaw = data['variants'] as List? ?? [];
+        bool modified = false;
+
+        final updatedVariantsRaw = variantsRaw.map((vRaw) {
+          final vMap = Map<String, dynamic>.from(vRaw as Map);
+          if (vMap['id'] == variant.id || vMap['name'] == variant.name) {
+            modified = true;
+            return _variantToMap(variant);
+          }
+          return vRaw;
+        }).toList();
+
+        if (modified) {
+          await doc.reference.update({'variants': updatedVariantsRaw});
+        }
+      }
+    } catch (_) {}
   }
 
   @override
   Future<void> deleteVariant(String id) async {
     await _firestore.collection('menu_variants').doc(id).delete();
+
+    try {
+      final itemsSnapshot = await _firestore.collection('menu_items').get();
+      for (final doc in itemsSnapshot.docs) {
+        final data = doc.data();
+        final variantsRaw = data['variants'] as List? ?? [];
+        final originalLen = variantsRaw.length;
+        final updatedVariantsRaw = variantsRaw.where((vRaw) {
+          final vMap = Map<String, dynamic>.from(vRaw as Map);
+          return vMap['id'] != id;
+        }).toList();
+
+        if (updatedVariantsRaw.length != originalLen) {
+          await doc.reference.update({'variants': updatedVariantsRaw});
+        }
+      }
+    } catch (_) {}
   }
 
   Map<String, dynamic> _variantToMap(MenuVariant variant) {
@@ -149,11 +245,13 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
       'minSelections': variant.minSelections,
       'maxSelections': variant.maxSelections,
       'options': variant.options
-          .map((o) => {
-                'id': o.id,
-                'name': o.name,
-                'additionalPrice': o.additionalPrice,
-              })
+          .map(
+            (o) => {
+              'id': o.id,
+              'name': o.name,
+              'additionalPrice': o.additionalPrice,
+            },
+          )
           .toList(),
     };
   }
@@ -174,8 +272,9 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
       id: map['id'] as String? ?? '',
       name: map['name'] as String? ?? '',
       isRequired: isRequired,
-      minSelections: map['minSelections'] as int? ?? (isRequired ? 1 : 0),
-      maxSelections: map['maxSelections'] as int? ?? 1,
+      minSelections:
+          (map['minSelections'] as num?)?.toInt() ?? (isRequired ? 1 : 0),
+      maxSelections: (map['maxSelections'] as num?)?.toInt() ?? 1,
       options: options,
     );
   }
@@ -210,20 +309,24 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
       'isActive': item.isActive,
       'orderIndex': item.orderIndex,
       'variants': item.variants
-          .map((v) => {
-                'id': v.id,
-                'name': v.name,
-                'isRequired': v.isRequired,
-                'minSelections': v.minSelections,
-                'maxSelections': v.maxSelections,
-                'options': v.options
-                    .map((o) => {
-                          'id': o.id,
-                          'name': o.name,
-                          'additionalPrice': o.additionalPrice,
-                        })
-                    .toList(),
-              })
+          .map(
+            (v) => {
+              'id': v.id,
+              'name': v.name,
+              'isRequired': v.isRequired,
+              'minSelections': v.minSelections,
+              'maxSelections': v.maxSelections,
+              'options': v.options
+                  .map(
+                    (o) => {
+                      'id': o.id,
+                      'name': o.name,
+                      'additionalPrice': o.additionalPrice,
+                    },
+                  )
+                  .toList(),
+            },
+          )
           .toList(),
     };
   }
@@ -247,8 +350,9 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
         id: vMap['id'] as String? ?? '',
         name: vMap['name'] as String? ?? '',
         isRequired: isRequired,
-        minSelections: vMap['minSelections'] as int? ?? (isRequired ? 1 : 0),
-        maxSelections: vMap['maxSelections'] as int? ?? 1,
+        minSelections:
+            (vMap['minSelections'] as num?)?.toInt() ?? (isRequired ? 1 : 0),
+        maxSelections: (vMap['maxSelections'] as num?)?.toInt() ?? 1,
         options: options,
       );
     }).toList();
@@ -262,11 +366,10 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
       imageUrl: map['imageUrl'] as String? ?? '',
       isRecommended: map['isRecommended'] as bool? ?? false,
       categoryId: map['categoryId'] as String? ?? '',
-      stock: map['stock'] as int? ?? 50,
+      stock: (map['stock'] as num?)?.toInt() ?? 50,
       isActive: map['isActive'] as bool? ?? true,
-      orderIndex: map['orderIndex'] as int? ?? 0,
+      orderIndex: (map['orderIndex'] as num?)?.toInt() ?? 0,
       variants: variants,
     );
   }
-
 }

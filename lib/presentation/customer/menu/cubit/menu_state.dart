@@ -18,6 +18,7 @@ class MenuLoaded extends MenuState {
   final List<MenuItem> menuItems;
   final List<MenuItem> allMenuItems;
   final List<MenuItem> recommendedItems;
+  final List<MenuItem> bestSellers;
   final String selectedCategoryId; // 'All' or specific id
   final String searchQuery;
   final bool isLoading;
@@ -27,6 +28,7 @@ class MenuLoaded extends MenuState {
     required this.menuItems,
     required this.allMenuItems,
     required this.recommendedItems,
+    required this.bestSellers,
     this.selectedCategoryId = 'All',
     this.searchQuery = '',
     this.isLoading = false,
@@ -38,6 +40,7 @@ class MenuLoaded extends MenuState {
     menuItems,
     allMenuItems,
     recommendedItems,
+    bestSellers,
     selectedCategoryId,
     searchQuery,
     isLoading,
@@ -48,6 +51,7 @@ class MenuLoaded extends MenuState {
     List<MenuItem>? menuItems,
     List<MenuItem>? allMenuItems,
     List<MenuItem>? recommendedItems,
+    List<MenuItem>? bestSellers,
     String? selectedCategoryId,
     String? searchQuery,
     bool? isLoading,
@@ -57,6 +61,7 @@ class MenuLoaded extends MenuState {
       menuItems: menuItems ?? this.menuItems,
       allMenuItems: allMenuItems ?? this.allMenuItems,
       recommendedItems: recommendedItems ?? this.recommendedItems,
+      bestSellers: bestSellers ?? this.bestSellers,
       selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,

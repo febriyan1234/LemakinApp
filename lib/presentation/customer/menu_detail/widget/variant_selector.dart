@@ -5,18 +5,26 @@ import '../../../../domain/entities/menu_item.dart';
 
 class VariantSelector extends StatelessWidget {
   final MenuVariant variant;
-  final VariantOption? selectedOption;
-  final ValueChanged<VariantOption?> onOptionSelected;
+  final List<VariantOption> selectedOptions;
+  final ValueChanged<VariantOption?> onSingleOptionSelected;
+  final void Function(VariantOption option, bool isSelected) onToggleOption;
+  final VoidCallback onClearSelection;
+  final bool isClosed;
 
   const VariantSelector({
     super.key,
     required this.variant,
-    required this.selectedOption,
-    required this.onOptionSelected,
+    required this.selectedOptions,
+    required this.onSingleOptionSelected,
+    required this.onToggleOption,
+    required this.onClearSelection,
+    this.isClosed = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isMulti = variant.maxSelections > 1;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -52,7 +60,7 @@ class VariantSelector extends StatelessWidget {
                   ),
                 ),
               ],
-              if (variant.maxSelections > 1) ...[
+              if (isMulti) ...[
                 const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -70,14 +78,16 @@ class VariantSelector extends StatelessWidget {
                   ),
                 ),
               ],
-              if (!variant.isRequired && variant.minSelections == 0 && selectedOption != null) ...[
+              if (!variant.isRequired &&
+                  variant.minSelections == 0 &&
+                  selectedOptions.isNotEmpty) ...[
                 const Spacer(),
                 GestureDetector(
-                  onTap: () => onOptionSelected(null),
-                  child: const Text(
+                  onTap: isClosed ? null : onClearSelection,
+                  child: Text(
                     'Clear Selection',
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: isClosed ? Colors.grey : AppColors.primary,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -106,32 +116,60 @@ class VariantSelector extends StatelessWidget {
             ),
             itemBuilder: (context, index) {
               final option = variant.options[index];
+              final isSelected = selectedOptions.any((o) => o.id == option.id);
 
-              return RadioListTile<String>(
-                value: option.id,
-                groupValue: selectedOption?.id,
-                onChanged: (_) => onOptionSelected(option),
-                title: Text(
-                  option.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textDark,
+              if (isMulti) {
+                return CheckboxListTile(
+                  value: isSelected,
+                  onChanged: isClosed ? null : (checked) => onToggleOption(option, checked ?? false),
+                  title: Text(
+                    option.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textDark,
+                    ),
                   ),
-                ),
-                secondary: option.additionalPrice > 0
-                    ? Text(
-                        '+ ${CurrencyFormatter.format(option.additionalPrice)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      )
-                    : null,
-                activeColor: AppColors.primary,
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              );
+                  secondary: option.additionalPrice > 0
+                      ? Text(
+                          '+ ${CurrencyFormatter.format(option.additionalPrice)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : null,
+                  activeColor: AppColors.primary,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                );
+              } else {
+                return RadioListTile<String>(
+                  value: option.id,
+                  groupValue: selectedOptions.isNotEmpty ? selectedOptions.first.id : null,
+                  onChanged: isClosed ? null : (_) => onSingleOptionSelected(option),
+                  title: Text(
+                    option.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  secondary: option.additionalPrice > 0
+                      ? Text(
+                          '+ ${CurrencyFormatter.format(option.additionalPrice)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : null,
+                  activeColor: AppColors.primary,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                );
+              }
             },
           ),
         ),
