@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lemakin_app/core/utils/app_toast.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +14,7 @@ import '../auth/cubit/admin_auth_cubit.dart';
 import '../auth/cubit/admin_auth_state.dart';
 import '../auth/ui/admin_login_page.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/app_loading_indicator.dart';
 
 class AdminLayout extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -515,21 +517,11 @@ Future<void> _seedFirestoreData(BuildContext context) async {
     }
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Firestore Database seeded successfully! Please refresh pages.'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      showAppToast(context, 'Firestore Database seeded successfully! Please refresh pages.', type: AppToastType.success);
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to seed database: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      showAppToast(context, 'Failed to seed database: $e', type: AppToastType.error);
     }
   }
 }
@@ -659,7 +651,10 @@ void _showSettingsDialog(BuildContext context) {
             return const SizedBox(
               height: 250,
               child: Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+                child: AppLoadingIndicator(
+                  width: 100,
+                  height: 100,
+                ),
               ),
             );
           }
@@ -872,7 +867,7 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
               subtitle: Text(
                 isShopOpen
                     ? (isTempClosedNow
-                        ? 'Outlet Tutup Sementara s.d ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil?.minute.toString().padLeft(2, '0')}'
+                        ? 'Outlet Temporarily Closed until ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil?.minute.toString().padLeft(2, '0')}'
                         : 'Store is OPEN for orders')
                     : 'Store is CLOSED for orders',
                 style: TextStyle(
@@ -910,7 +905,7 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Tutup Sementara',
+                      'Temporarily Closed',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -919,7 +914,7 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Tutup outlet selama durasi tertentu. Toko akan otomatis terbuka kembali setelah waktu habis.',
+                      'Close the outlet for a specified duration. The shop will automatically reopen after the time expires.',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textSecondary,
@@ -935,7 +930,7 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Status: Tutup Sementara',
+                                  'Status: Temporarily Closed',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -943,7 +938,7 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                                   ),
                                 ),
                                 Text(
-                                  'Hingga pukul ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil!.minute.toString().padLeft(2, '0')} (${closedUntil!.difference(DateTime.now()).inMinutes} menit lagi)',
+                                  'Until ${closedUntil!.hour.toString().padLeft(2, '0')}:${closedUntil!.minute.toString().padLeft(2, '0')} (${closedUntil!.difference(DateTime.now()).inMinutes} minutes remaining)',
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: AppColors.textSecondary,
@@ -960,7 +955,7 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                                 selectedMinutes = null;
                               });
                             },
-                            child: const Text('Buka Sekarang'),
+                            child: const Text('Open Now'),
                           ),
                         ],
                       ),
@@ -1105,15 +1100,11 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
 
                         if (context.mounted) {
                           Navigator.pop(widget.sheetCtx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Settings saved successfully!')),
-                          );
+                          showAppToast(context, 'Settings saved successfully!', type: AppToastType.success);
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed to save settings: $e'), backgroundColor: AppColors.error),
-                          );
+                          showAppToast(context, 'Failed to save settings: $e', type: AppToastType.error);
                         }
                       }
                     },

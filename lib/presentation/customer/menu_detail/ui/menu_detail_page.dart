@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lemakin_app/core/utils/app_toast.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/widgets/gradient_button.dart';
+import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../../domain/entities/cart_item.dart';
 import '../../cart/cubit/cart_cubit.dart';
 import '../../cart/cubit/cart_state.dart';
@@ -65,13 +67,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
           listener: (context, state) {
             if (state is MenuDetailLoaded) {
               if (state.validationError != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.validationError!),
-                    backgroundColor: AppColors.error,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                showAppToast(context, state.validationError!, type: AppToastType.error);
               }
               if (state.editCartItemId != null &&
                   _notesController.text.isEmpty) {
@@ -92,7 +88,10 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
           builder: (context, state) {
             if (state is MenuDetailLoading) {
               return const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+                child: AppLoadingIndicator(
+                  width: 100,
+                  height: 100,
+                ),
               );
             } else if (state is MenuDetailError) {
               return Center(
@@ -157,8 +156,9 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                                             return Container(
                                               color: Colors.grey[100],
                                               child: const Center(
-                                                child: CircularProgressIndicator(
-                                                  color: AppColors.primary,
+                                                child: AppLoadingIndicator(
+                                                  width: 40,
+                                                  height: 40,
                                                 ),
                                               ),
                                             );
@@ -408,7 +408,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                                 // Order Now button
                                 Expanded(
                                   child: GradientButton(
-                                    onPressed: isCurrentlyClosed || item.stock == 0
+                                    onPressed: isCurrentlyClosed || item.stock == 0 || !item.isActive
                                         ? null
                                         : () {
                                             final success = _cubit.addToCart(
@@ -453,12 +453,14 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                                     height: 48,
                                     child: Text(
                                       isCurrentlyClosed
-                                          ? 'Outlet Sedang Tutup'
-                                          : (item.stock == 0
-                                              ? 'Out of Stock'
-                                              : (state.editCartItemId != null
-                                                    ? 'Perbarui Pesanan - ${CurrencyFormatter.format(state.totalPrice)}'
-                                                    : 'Add to Cart - ${CurrencyFormatter.format(state.totalPrice)}')),
+                                          ? 'Outlet is Closed'
+                                          : (!item.isActive
+                                              ? 'Unavailable'
+                                              : (item.stock == 0
+                                                  ? 'Out of Stock'
+                                                  : (state.editCartItemId != null
+                                                        ? 'Update Order - ${CurrencyFormatter.format(state.totalPrice)}'
+                                                        : 'Add to Cart - ${CurrencyFormatter.format(state.totalPrice)}'))),
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,

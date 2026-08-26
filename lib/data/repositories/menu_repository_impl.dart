@@ -32,8 +32,8 @@ class MenuRepositoryImpl implements MenuRepository {
   }
 
   @override
-  Future<List<MenuItem>> getRecommendedItems() {
-    return localDataSource.getRecommendedItems();
+  Future<List<MenuItem>> getRecommendedItems({bool includeInactive = false}) {
+    return localDataSource.getRecommendedItems(includeInactive: includeInactive);
   }
 
   @override

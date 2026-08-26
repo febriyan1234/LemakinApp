@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lemakin_app/core/utils/app_toast.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,6 +7,7 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/widgets/gradient_button.dart';
+import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../../domain/entities/order.dart';
 import '../../cart/cubit/cart_cubit.dart';
 import '../../cart/cubit/cart_state.dart';
@@ -51,7 +53,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Future<void> _redirectToWhatsApp(OrderEntity order) async {
     final buffer = StringBuffer();
-    buffer.writeln('Halo, saya ${order.customer.name} ingin pesan:');
+    buffer.writeln('Hello, I am ${order.customer.name} and I would like to order:');
     buffer.writeln();
     buffer.writeln('--------------------------------------');
     for (final item in order.items) {
@@ -62,27 +64,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
           .map((v) => v.name)
           .join(' • ');
       if (variantsText.isNotEmpty) {
-        buffer.writeln('\tPilihan: $variantsText');
+        buffer.writeln('\tOptions: $variantsText');
       }
       if (item.notes != null && item.notes!.isNotEmpty) {
-        buffer.writeln('\tCatatan: "${item.notes}"');
+        buffer.writeln('\tNotes: "${item.notes}"');
       }
     }
     buffer.writeln('--------------------------------------');
     buffer.writeln();
-    buffer.writeln('Alamat: ${order.customer.address}');
+    buffer.writeln('Address: ${order.customer.address}');
     if (order.scheduledAt != null) {
       final dateStr = '${order.scheduledAt!.day.toString().padLeft(2, '0')}/${order.scheduledAt!.month.toString().padLeft(2, '0')}/${order.scheduledAt!.year}';
       final timeStr = '${order.scheduledAt!.hour.toString().padLeft(2, '0')}:${order.scheduledAt!.minute.toString().padLeft(2, '0')}';
-      buffer.writeln('Jadwal Kirim: $dateStr jam $timeStr');
+      buffer.writeln('Delivery Schedule: $dateStr at $timeStr');
     } else {
-      buffer.writeln('Jadwal Kirim: Sekarang (Order Now)');
+      buffer.writeln('Delivery Schedule: Now (Order Now)');
     }
     buffer.writeln('Order ID: ${order.id}');
     buffer.writeln();
 
-    buffer.writeln('Pembayaran Qris https://lemakin/pembayaran');
-    buffer.writeln('Mohon konfirmasi pesanan saya. Terima kasih!');
+    buffer.writeln('QRIS Payment: https://lemakin/pembayaran');
+    buffer.writeln('Please confirm my order. Thank you!');
 
     final String message = buffer.toString();
     final String phoneNumber = '6283819309651';
@@ -97,12 +99,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal membuka WhatsApp. Silakan hubungi admin.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        showAppToast(context, 'Failed to open WhatsApp. Please contact admin.', type: AppToastType.error);
       }
     }
   }
@@ -225,13 +222,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 }
               }
             } else if (state is CheckoutError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: AppColors.error,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              showAppToast(context, state.message, type: AppToastType.error);
             }
           },
           builder: (context, state) {
@@ -393,7 +384,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             const SizedBox(height: 24),
 
                             const Text(
-                              'Waktu Pengiriman',
+                              'Delivery Time',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -430,7 +421,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         const SizedBox(width: 12),
                                         const Expanded(
                                           child: Text(
-                                            'Pesan Sekarang',
+                                            'Order Now',
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
@@ -476,8 +467,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         Expanded(
                                           child: Text(
                                             _scheduledDateTime == null
-                                                ? 'Pilih Waktu Pengiriman'
-                                                : 'Pukul ${_scheduledDateTime!.hour.toString().padLeft(2, '0')}:${_scheduledDateTime!.minute.toString().padLeft(2, '0')}',
+                                                ? 'Select Delivery Time'
+                                                : 'At ${_scheduledDateTime!.hour.toString().padLeft(2, '0')}:${_scheduledDateTime!.minute.toString().padLeft(2, '0')}',
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
@@ -522,7 +513,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                     color: AppColors.primary,
                                   ),
                                   label: const Text(
-                                    'Tambah Pesanan',
+                                    'Add Item',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
@@ -821,13 +812,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   ? null
                                   : () {
                                       if (_isScheduled && _scheduledDateTime == null) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Silakan pilih tanggal dan waktu pengiriman.'),
-                                            backgroundColor: AppColors.error,
-                                            behavior: SnackBarBehavior.floating,
-                                          ),
-                                        );
+                                        showAppToast(context, 'Please select the delivery date and time.', type: AppToastType.error);
                                         return;
                                       }
                                       _cubit.submitOrder(
@@ -840,13 +825,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               borderRadius: 12,
                               height: 48,
                               child: isBtnLoading
-                                  ? const SizedBox(
-                                      height: 20,
+                                  ? const AppLoadingIndicator(
                                       width: 20,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
+                                      height: 20,
                                     )
                                   : Text(
                                       _isScheduled ? 'Schedule Order' : 'Order Now',

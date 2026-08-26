@@ -61,13 +61,15 @@ class MenuFirestoreDataSourceImpl implements MenuLocalDataSource {
   }
 
   @override
-  Future<List<MenuItem>> getRecommendedItems() async {
-    final snapshot = await _firestore
+  Future<List<MenuItem>> getRecommendedItems({bool includeInactive = false}) async {
+    Query query = _firestore
         .collection('menu_items')
-        .where('isRecommended', isEqualTo: true)
-        .where('isActive', isEqualTo: true)
-        .get();
-    return snapshot.docs.map((doc) => _menuItemFromMap(doc.data())).toList();
+        .where('isRecommended', isEqualTo: true);
+    if (!includeInactive) {
+      query = query.where('isActive', isEqualTo: true);
+    }
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => _menuItemFromMap(doc.data() as Map<String, dynamic>)).toList();
   }
 
   @override

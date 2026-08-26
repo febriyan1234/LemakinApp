@@ -9,7 +9,7 @@ abstract class MenuLocalDataSource {
     bool includeInactive = false,
   });
   Future<MenuItem?> getMenuItemDetail(String id);
-  Future<List<MenuItem>> getRecommendedItems();
+  Future<List<MenuItem>> getRecommendedItems({bool includeInactive = false});
   Future<void> addMenuItem(MenuItem item);
   Future<void> updateMenuItem(MenuItem item);
   Future<void> deleteMenuItem(String id);
@@ -486,9 +486,13 @@ class MenuLocalDataSourceImpl implements MenuLocalDataSource {
   }
 
   @override
-  Future<List<MenuItem>> getRecommendedItems() async {
+  Future<List<MenuItem>> getRecommendedItems({bool includeInactive = false}) async {
     await Future.delayed(const Duration(milliseconds: 200));
-    return _menuItems.where((item) => item.isRecommended && item.isActive).toList();
+    if (includeInactive) {
+      return _menuItems.where((item) => item.isRecommended).toList();
+    } else {
+      return _menuItems.where((item) => item.isRecommended && item.isActive).toList();
+    }
   }
 
   @override

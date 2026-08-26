@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lemakin_app/core/utils/app_toast.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
@@ -8,6 +9,7 @@ import '../../../../domain/entities/menu_item.dart';
 import '../../../../domain/repositories/menu_repository.dart';
 import '../../../../core/di/injection_container.dart' as di;
 import '../../../../core/widgets/gradient_button.dart';
+import '../../../../core/widgets/app_loading_indicator.dart';
 import '../cubit/admin_reports_cubit.dart';
 
 class AdminEditOrderPage extends StatefulWidget {
@@ -130,9 +132,7 @@ class _AdminEditOrderPageState extends State<AdminEditOrderPage> {
 
   void _showAddItemPicker() {
     if (_allAvailableMenuItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No menu items available to add')),
-      );
+      showAppToast(context, 'No menu items available to add', type: AppToastType.info);
       return;
     }
 
@@ -242,9 +242,7 @@ class _AdminEditOrderPageState extends State<AdminEditOrderPage> {
   void _saveOrder() async {
     if (!_formKey.currentState!.validate()) return;
     if (_items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one item to the order')),
-      );
+      showAppToast(context, 'Please add at least one item to the order', type: AppToastType.info);
       return;
     }
 
@@ -282,7 +280,12 @@ class _AdminEditOrderPageState extends State<AdminEditOrderPage> {
         elevation: 0.5,
       ),
       body: _isLoadingMenu
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: AppLoadingIndicator(
+                width: 100,
+                height: 100,
+              ),
+            )
           : Form(
               key: _formKey,
               child: SingleChildScrollView(
@@ -924,12 +927,7 @@ class _AdminEditOrderPageState extends State<AdminEditOrderPage> {
                                               if (selectedCount < variant.maxSelections) {
                                                 tempSelected['${variant.name}:${option.id}'] = option;
                                               } else {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Maximum ${variant.maxSelections} options allowed for ${variant.name}'),
-                                                    duration: const Duration(seconds: 1),
-                                                  ),
-                                                );
+                                                showAppToast(context, 'Maximum ${variant.maxSelections} options allowed for ${variant.name}', type: AppToastType.info);
                                               }
                                             }
                                           });
@@ -1053,9 +1051,7 @@ class _AdminEditOrderPageState extends State<AdminEditOrderPage> {
                             onPressed: () {
                               for (final variant in menuItem.variants) {
                                 if (variant.isRequired && tempSelected[variant.name] == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Please select an option for ${variant.name}')),
-                                  );
+                                  showAppToast(context, 'Please select an option for ${variant.name}', type: AppToastType.info);
                                   return;
                                 }
                               }

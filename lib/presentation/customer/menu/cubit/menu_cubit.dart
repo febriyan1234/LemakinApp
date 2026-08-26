@@ -11,8 +11,8 @@ class MenuCubit extends Cubit<MenuState> {
     emit(MenuLoading());
     try {
       final categories = await getMenuUseCase.getCategories();
-      final items = await getMenuUseCase.getMenuItems(categoryId: 'All');
-      final recommended = await getMenuUseCase.getRecommendedItems();
+      final items = await getMenuUseCase.getMenuItems(categoryId: 'All', includeInactive: true);
+      final recommended = await getMenuUseCase.getRecommendedItems(includeInactive: true);
 
       emit(
         MenuLoaded(
@@ -39,6 +39,7 @@ class MenuCubit extends Cubit<MenuState> {
         final items = await getMenuUseCase.getMenuItems(
           categoryId: categoryId,
           searchQuery: currentState.searchQuery,
+          includeInactive: true,
         );
         emit(
           currentState.copyWith(
@@ -63,6 +64,7 @@ class MenuCubit extends Cubit<MenuState> {
               ? 'All'
               : currentState.selectedCategoryId,
           searchQuery: query,
+          includeInactive: true,
         );
         emit(
           currentState.copyWith(

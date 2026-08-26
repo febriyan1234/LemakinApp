@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../domain/entities/menu_item.dart';
 
@@ -105,8 +106,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
                             return Container(
                               color: Colors.grey[200],
                               child: const Center(
-                                child: CircularProgressIndicator(
-                                  color: Color(0xFFFF6500),
+                                child: AppLoadingIndicator(
+                                  width: 40,
+                                  height: 40,
                                 ),
                               ),
                             );

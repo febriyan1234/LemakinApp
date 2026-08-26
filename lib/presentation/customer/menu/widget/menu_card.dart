@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../domain/entities/menu_item.dart';
 
@@ -24,7 +25,7 @@ class MenuCard extends StatelessWidget {
     if (isHorizontal) {
       return _buildHorizontalCard(context);
     }
-    return Card(
+    final card = Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -52,9 +53,9 @@ class MenuCard extends StatelessWidget {
                           return Container(
                             color: Colors.grey[100],
                             child: const Center(
-                              child: CircularProgressIndicator(
-                                color: AppColors.primary,
-                                strokeWidth: 2,
+                              child: AppLoadingIndicator(
+                                width: 30,
+                                height: 30,
                               ),
                             ),
                           );
@@ -74,7 +75,36 @@ class MenuCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (item.stock == 0)
+                  if (!item.isActive)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.75),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'UNAVAILABLE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (item.stock == 0)
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
@@ -88,11 +118,11 @@ class MenuCard extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
+                            color: Colors.black.withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
-                            'SOLD OUT',
+                            'OUT OF STOCK',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -107,42 +137,47 @@ class MenuCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            // Name / Title
+            // Item Name
             Text(
               item.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textDark,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 2),
-            // Description
-            Text(
-              item.description,
-              style: const TextStyle(
-                fontSize: 10,
-                color: AppColors.textSecondary,
+            const SizedBox(height: 4),
+            // Item Description
+            Expanded(
+              child: Text(
+                item.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AppColors.textSecondary,
+                  height: 1.3,
+                ),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
-            const Spacer(),
-            // Bottom Row (Price and Add Button)
+            const SizedBox(height: 8),
+            // Price & Add Button Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         CurrencyFormatter.format(item.price),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textDark,
                         ),
@@ -160,7 +195,9 @@ class MenuCard extends StatelessWidget {
                   ),
                 ),
                 // Circular Add Button or Counter
-                if (item.stock > 0)
+                if (!item.isActive)
+                  const Icon(Icons.block, size: 20, color: Colors.grey)
+                else if (item.stock > 0)
                   if (item.variants.isEmpty && quantity > 0)
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -252,10 +289,11 @@ class MenuCard extends StatelessWidget {
         ),
       ),
     );
+    return item.isActive ? card : Opacity(opacity: 0.6, child: card);
   }
 
   Widget _buildHorizontalCard(BuildContext context) {
-    return Card(
+    final card = Card(
       clipBehavior: Clip.antiAlias,
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -276,9 +314,9 @@ class MenuCard extends StatelessWidget {
                       return Container(
                         color: Colors.grey[100],
                         child: const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
-                            strokeWidth: 2,
+                          child: AppLoadingIndicator(
+                            width: 30,
+                            height: 30,
                           ),
                         ),
                       );
@@ -334,7 +372,33 @@ class MenuCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (item.stock == 0)
+                if (!item.isActive)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      alignment: Alignment.center,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'UNAVAILABLE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else if (item.stock == 0)
                   Positioned.fill(
                     child: Container(
                       color: Colors.black.withValues(alpha: 0.4),
@@ -422,7 +486,9 @@ class MenuCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (item.stock > 0)
+                      if (!item.isActive)
+                        const Icon(Icons.block, size: 14, color: Colors.grey)
+                      else if (item.stock > 0)
                         const Icon(
                           Icons.add_shopping_cart,
                           size: 14,
@@ -439,5 +505,6 @@ class MenuCard extends StatelessWidget {
         ],
       ),
     );
+    return item.isActive ? card : Opacity(opacity: 0.6, child: card);
   }
 }

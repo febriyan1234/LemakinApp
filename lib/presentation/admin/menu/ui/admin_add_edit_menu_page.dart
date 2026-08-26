@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:lemakin_app/core/utils/app_toast.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lemakin_app/core/utils/currency_formatter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../../../../domain/entities/menu_item.dart';
 import '../../../../domain/entities/menu_category.dart';
 import '../cubit/admin_menu_cubit.dart';
 import '../cubit/admin_menu_state.dart';
+import '../../../../core/widgets/app_loading_indicator.dart';
 
 class AdminAddEditMenuPage extends StatefulWidget {
   final MenuItem? menuItem;
@@ -32,6 +35,8 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
   bool _isRecommended = false;
   String _pickedImageUrl = '';
   final List<MenuVariant> _selectedVariants = [];
+  bool _isUnlimitedStock = false;
+  String _variantSearchQuery = '';
 
   bool get _isEditMode => widget.menuItem != null;
 
@@ -55,14 +60,17 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
     final discount = (item != null && item.originalPrice != null) ? (item.originalPrice! - item.price) : 0.0;
 
     _priceController = TextEditingController(
-      text: item != null ? '${normalPrice.toInt()}' : '',
+      text: item != null ? CurrencyFormatter.formatString('${normalPrice.toInt()}') : '',
     );
     _discountController = TextEditingController(
-      text: (item != null && item.originalPrice != null) ? '${discount.toInt()}' : '',
+      text: (item != null && item.originalPrice != null)
+          ? CurrencyFormatter.formatString('${discount.toInt()}')
+          : '',
     );
     _stockController = TextEditingController(
-      text: item != null ? '${item.stock}' : '50',
+      text: item != null ? (item.stock == -1 ? '' : '${item.stock}') : '50',
     );
+    _isUnlimitedStock = item != null ? (item.stock == -1) : false;
     _imageUrlController = TextEditingController(
       text:
           item?.imageUrl ??
@@ -92,13 +100,13 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
     if (_formKey.currentState!.validate()) {
       final name = _nameController.text.trim();
       final desc = _descriptionController.text.trim();
-      final normalPrice = double.parse(_priceController.text);
-      final discountStr = _discountController.text.trim();
+      final normalPrice = double.parse(_priceController.text.replaceAll('.', ''));
+      final discountStr = _discountController.text.trim().replaceAll('.', '');
       final discount = discountStr.isNotEmpty ? (double.tryParse(discountStr) ?? 0.0) : 0.0;
 
       final finalPrice = normalPrice - discount;
       final double? originalPrice = discount > 0 ? normalPrice : null;
-      final stock = int.parse(_stockController.text);
+      final stock = _isUnlimitedStock ? -1 : int.parse(_stockController.text);
       final imageUrl = _pickedImageUrl.isNotEmpty
           ? _pickedImageUrl
           : _imageUrlController.text.trim();
@@ -261,13 +269,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                             'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600';
                         _imageUrlController.clear();
                       });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Mock photo captured from Camera successfully!',
-                          ),
-                        ),
-                      );
+                      showAppToast(context, 'Mock photo captured from Camera successfully!', type: AppToastType.success);
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -442,7 +444,10 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
           return const SizedBox(
             height: 300,
             child: Center(
-              child: CircularProgressIndicator(),
+            child: AppLoadingIndicator(
+              width: 100,
+              height: 100,
+            ),
             ),
           );
         }
@@ -763,23 +768,29 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _priceController,
-                                keyboardType: TextInputType.number,
-                                validator: (val) {
-                                  if (val == null || val.isEmpty) {
-                                    return 'Required';
-                                  }
-                                  final parsed = double.tryParse(val);
-                                  if (parsed == null || parsed <= 0) {
-                                    return 'Must be greater than 0';
-                                  }
-                                  return null;
+                              ValueListenableBuilder<TextEditingValue>(
+                                valueListenable: _priceController,
+                                builder: (context, value, child) {
+                                  return TextFormField(
+                                    controller: _priceController,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [ThousandsSeparatorFormatter()],
+                                    validator: (val) {
+                                      if (val == null || val.isEmpty) {
+                                        return 'Required';
+                                      }
+                                      final parsed = double.tryParse(val.replaceAll('.', ''));
+                                      if (parsed == null || parsed <= 0) {
+                                        return 'Must be greater than 0';
+                                      }
+                                      return null;
+                                    },
+                                    decoration: InputDecoration(
+                                      hintText: 'e.g. 8.000',
+                                      prefixText: value.text.isNotEmpty ? 'Rp ' : null,
+                                    ),
+                                  );
                                 },
-                                decoration: const InputDecoration(
-                                  hintText: 'e.g. 8000',
-                                  prefixText: 'Rp ',
-                                ),
                               ),
                             ],
                           ),
@@ -799,26 +810,32 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _discountController,
-                                keyboardType: TextInputType.number,
-                                validator: (val) {
-                                  if (val == null || val.trim().isEmpty) return null;
-                                  final parsed = double.tryParse(val.trim());
-                                  if (parsed == null || parsed < 0) {
-                                    return 'Cannot be negative';
-                                  }
-                                  final normalPriceStr = _priceController.text.trim();
-                                  final normalPrice = double.tryParse(normalPriceStr);
-                                  if (normalPrice != null && parsed >= normalPrice) {
-                                    return 'Must be < Price';
-                                  }
-                                  return null;
+                              ValueListenableBuilder<TextEditingValue>(
+                                valueListenable: _discountController,
+                                builder: (context, value, child) {
+                                  return TextFormField(
+                                    controller: _discountController,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [ThousandsSeparatorFormatter()],
+                                    validator: (val) {
+                                      if (val == null || val.trim().isEmpty) return null;
+                                      final parsed = double.tryParse(val.trim().replaceAll('.', ''));
+                                      if (parsed == null || parsed < 0) {
+                                        return 'Cannot be negative';
+                                      }
+                                      final normalPriceStr = _priceController.text.trim().replaceAll('.', '');
+                                      final normalPrice = double.tryParse(normalPriceStr);
+                                      if (normalPrice != null && parsed >= normalPrice) {
+                                        return 'Must be < Price';
+                                      }
+                                      return null;
+                                    },
+                                    decoration: InputDecoration(
+                                      hintText: 'e.g. 2.000',
+                                      prefixText: value.text.isNotEmpty ? 'Rp ' : null,
+                                    ),
+                                  );
                                 },
-                                decoration: const InputDecoration(
-                                  hintText: 'e.g. 2000',
-                                  prefixText: 'Rp ',
-                                ),
                               ),
                             ],
                           ),
@@ -827,12 +844,12 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Stock Input
+                    // Stock Input & Unlimited Stock Section
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Initial Stock *',
+                          'Stock Availability *',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -840,23 +857,110 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _stockController,
-                          keyboardType: TextInputType.number,
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return 'Required';
-                            }
-                            final parsed = int.tryParse(val);
-                            if (parsed == null || parsed < 0) {
-                              return 'Cannot be negative';
-                            }
-                            return null;
+                        // Unlimited Stock option
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isUnlimitedStock = true;
+                              _stockController.text = '';
+                            });
                           },
-                          decoration: const InputDecoration(
-                            hintText: 'e.g. 50',
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Row(
+                              children: [
+                                Radio<bool>(
+                                  value: true,
+                                  groupValue: _isUnlimitedStock,
+                                  activeColor: AppColors.primary,
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        _isUnlimitedStock = val;
+                                        _stockController.text = '';
+                                      });
+                                    }
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Unlimited Stock',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
+                        // Limited Stock option
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isUnlimitedStock = false;
+                              _stockController.text = '50';
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Row(
+                              children: [
+                                Radio<bool>(
+                                  value: false,
+                                  groupValue: _isUnlimitedStock,
+                                  activeColor: AppColors.primary,
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        _isUnlimitedStock = val;
+                                        _stockController.text = '50';
+                                      });
+                                    }
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Limited Stock',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (!_isUnlimitedStock) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Initial Stock *',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _stockController,
+                            keyboardType: TextInputType.number,
+                            validator: (val) {
+                              if (_isUnlimitedStock) return null;
+                              if (val == null || val.isEmpty) {
+                                return 'Required';
+                              }
+                              final parsed = int.tryParse(val);
+                              if (parsed == null || parsed < 0) {
+                                return 'Cannot be negative';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              hintText: 'e.g. 50',
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -983,57 +1087,125 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                           ),
                         ),
                       )
-                    else if (state is AdminMenuLoaded)
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: state.variants.length,
-                        itemBuilder: (context, index) {
-                          final variant = state.variants[index];
-                          final isSelected = _selectedVariants.any((v) => v.id == variant.id);
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFFF5E62).withValues(alpha: 0.02) : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isSelected ? const Color(0xFFFF5E62) : Colors.grey[200]!,
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: CheckboxListTile(
-                              activeColor: const Color(0xFFFF5E62),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              title: Text(
-                                variant.name,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
+                    else if (state is AdminMenuLoaded) ...[
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border, width: 1),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search, size: 16, color: AppColors.textSecondary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                onChanged: (val) {
+                                  setState(() {
+                                    _variantSearchQuery = val.trim().toLowerCase();
+                                  });
+                                },
+                                decoration: const InputDecoration(
+                                  filled: false,
+                                  hintText: 'Search variants...',
+                                  hintStyle: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(vertical: 10),
                                 ),
                               ),
-                              subtitle: Text(
-                                '${variant.isRequired ? "Required" : "Optional"} • Options: ${variant.options.map((o) => '${o.name} (+Rp ${o.additionalPrice.toInt()})').join(', ')}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              value: isSelected,
-                              onChanged: (checked) {
-                                setState(() {
-                                  if (checked == true) {
-                                    _selectedVariants.add(variant);
-                                  } else {
-                                    _selectedVariants.removeWhere((v) => v.id == variant.id);
-                                  }
-                                });
-                              },
                             ),
-                          );
-                        },
+                          ],
+                        ),
                       ),
+                      Builder(
+                        builder: (context) {
+                          final filteredVariants = state.variants.where((v) {
+                            return v.name.toLowerCase().contains(_variantSearchQuery);
+                          }).toList();
+
+                          if (filteredVariants.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  'No matching variants found.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredVariants.length,
+                            itemBuilder: (context, index) {
+                              final variant = filteredVariants[index];
+                              final isSelected = _selectedVariants.any((v) => v.id == variant.id);
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFFF5E62).withValues(alpha: 0.02) : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? const Color(0xFFFF5E62) : Colors.grey[200]!,
+                                    width: isSelected ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: CheckboxListTile(
+                                  activeColor: const Color(0xFFFF5E62),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                  title: Text(
+                                    variant.name,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    '${variant.isRequired ? "Required" : "Optional"} • Options: ${variant.options.map((o) => '${o.name} (+Rp ${o.additionalPrice.toInt()})').join(', ')}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  value: isSelected,
+                                  onChanged: (checked) {
+                                    setState(() {
+                                      if (checked == true) {
+                                        _selectedVariants.add(variant);
+                                      } else {
+                                        _selectedVariants.removeWhere((v) => v.id == variant.id);
+                                      }
+                                    });
+                                  },
+                                ),
+                              );
+                            },
+                          );
+                        }
+                      ),
+                    ],
                     const SizedBox(height: 32),
 
                     // Submit & Cancel Action Buttons

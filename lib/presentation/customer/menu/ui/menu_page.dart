@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/store_status_helper.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/widgets/shimmer_widget.dart';
+import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../../domain/entities/cart_item.dart';
 import '../../../../domain/entities/menu_item.dart';
 import '../../cart/cubit/cart_cubit.dart';
@@ -97,8 +98,9 @@ class _MenuPageState extends State<MenuPage> {
                     builder: (context, menuState) {
                       if (menuState is MenuLoading) {
                         return const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
+                          child: AppLoadingIndicator(
+                            width: 120,
+                            height: 120,
                           ),
                         );
                       } else if (menuState is MenuError) {
@@ -160,12 +162,13 @@ class _MenuPageState extends State<MenuPage> {
                                             items: (() {
                                               final promoItems = menuState.allMenuItems
                                                   .where((item) =>
+                                                      item.isActive &&
                                                       item.originalPrice != null &&
                                                       item.originalPrice! > item.price)
                                                   .toList();
                                               if (promoItems.length <= 1) {
                                                 final recommended = menuState.allMenuItems
-                                                    .where((item) => item.isRecommended)
+                                                    .where((item) => item.isRecommended && item.isActive)
                                                     .toList();
                                                 for (final item in recommended) {
                                                   if (!promoItems.any((promo) => promo.id == item.id)) {
@@ -174,7 +177,7 @@ class _MenuPageState extends State<MenuPage> {
                                                 }
                                               }
                                               if (promoItems.isEmpty) {
-                                                return menuState.allMenuItems.take(3).toList();
+                                                return menuState.allMenuItems.where((item) => item.isActive).take(3).toList();
                                               }
                                               return promoItems;
                                             })(),
@@ -259,9 +262,9 @@ class _MenuPageState extends State<MenuPage> {
                                             Text(
                                               isCurrentlyClosed
                                                   ? (isClosedTemporarily && closedUntil != null
-                                                      ? 'Tutup Sementara s.d ${closedUntil.hour.toString().padLeft(2, '0')}:${closedUntil.minute.toString().padLeft(2, '0')}'
-                                                      : 'Outlet Sedang Tutup')
-                                                  : 'Outlet Buka - Menerima Pesanan',
+                                                      ? 'Temporarily Closed until ${closedUntil.hour.toString().padLeft(2, '0')}:${closedUntil.minute.toString().padLeft(2, '0')}'
+                                                      : 'Outlet is Closed')
+                                                  : 'Outlet Open - Accepting Orders',
                                               style: TextStyle(
                                                 color: isCurrentlyClosed ? AppColors.error : AppColors.success,
                                                 fontSize: 12,
@@ -619,7 +622,7 @@ class _MenuPageState extends State<MenuPage> {
   }
 
   Widget _buildMenuListItem(BuildContext context, MenuItem item, int quantity) {
-    return Card(
+    final card = Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -631,24 +634,54 @@ class _MenuPageState extends State<MenuPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                item.imageUrl,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: Colors.grey[200],
-                  width: 80,
-                  height: 80,
-                  child: const Icon(
-                    Icons.broken_image,
-                    size: 30,
-                    color: Colors.grey,
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    item.imageUrl,
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: Colors.grey[200],
+                      width: 80,
+                      height: 80,
+                      child: const Icon(
+                        Icons.broken_image,
+                        size: 30,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                if (!item.isActive)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withOpacity(0.4),
+                      alignment: Alignment.center,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.65),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'UNAVAILABLE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 7,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -721,14 +754,16 @@ class _MenuPageState extends State<MenuPage> {
                             Text(
                               CurrencyFormatter.format(item.originalPrice!),
                               style: const TextStyle(
-                                fontSize: 10,
-                                color: AppColors.textLight,
-                                decoration: TextDecoration.lineThrough,
+                                  fontSize: 10,
+                                  color: AppColors.textLight,
+                                  decoration: TextDecoration.lineThrough,
                               ),
                             ),
                         ],
                       ),
-                      if (item.variants.isEmpty && quantity > 0)
+                      if (!item.isActive)
+                        const Icon(Icons.block, size: 20, color: Colors.grey)
+                      else if (item.variants.isEmpty && quantity > 0)
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -823,9 +858,13 @@ class _MenuPageState extends State<MenuPage> {
         ),
       ),
     );
+    return item.isActive ? card : Opacity(opacity: 0.6, child: card);
   }
 
   Future<void> _handleItemTap(BuildContext context, MenuItem item) async {
+    if (!item.isActive) {
+      return;
+    }
     final cartCubit = context.read<CartCubit>();
     final cartState = cartCubit.state;
 
@@ -955,7 +994,7 @@ class _MenuPageState extends State<MenuPage> {
                                         cartItem.notes!.isNotEmpty) ...[
                                       const SizedBox(height: 2),
                                       Text(
-                                        'Catatan: "${cartItem.notes}"',
+                                        'Notes: "${cartItem.notes}"',
                                         style: const TextStyle(
                                           fontSize: 11,
                                           fontStyle: FontStyle.italic,

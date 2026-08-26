@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/gradient_button.dart';
+import '../../../../core/widgets/app_loading_indicator.dart';
 import '../cubit/admin_auth_cubit.dart';
 import '../cubit/admin_auth_state.dart';
 
@@ -235,13 +236,9 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                               borderRadius: 12,
                               height: 50,
                               child: isLoading
-                                  ? const SizedBox(
+                                  ? const AppLoadingIndicator(
                                       width: 24,
                                       height: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2.5,
-                                      ),
                                     )
                                   : const Text(
                                       'Login to Dashboard',

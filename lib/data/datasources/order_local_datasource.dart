@@ -241,7 +241,9 @@ class OrderLocalDataSourceImpl implements OrderLocalDataSource {
       try {
         final currentMenu = await menuLocalDataSource.getMenuItemDetail(cartItem.menuItem.id);
         if (currentMenu != null) {
-          final updatedStock = (currentMenu.stock - cartItem.quantity).clamp(0, 9999);
+          final updatedStock = currentMenu.stock == -1
+              ? -1
+              : (currentMenu.stock - cartItem.quantity).clamp(0, 9999);
           // If stock reaches 0, we can optionally keep it active but mark as out of stock.
           // The detail UI will check stock.
           await menuLocalDataSource.updateMenuItem(

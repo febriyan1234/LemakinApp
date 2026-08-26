@@ -48,28 +48,17 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
   }
 
   void _selectDateRange(BuildContext context, AdminReportsLoaded state) async {
-    final pickedRange = await showDateRangePicker(
+    final pickedRange = await showModalBottomSheet<DateTimeRange>(
       context: context,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now(),
-      initialDateRange:
-          state.expenseStartDate != null && state.expenseEndDate != null
-          ? DateTimeRange(
-              start: state.expenseStartDate!,
-              end: state.expenseEndDate!,
-            )
-          : null,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: AppColors.textDark,
-            ),
-          ),
-          child: child!,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      isScrollControlled: true,
+      builder: (context) {
+        return _CustomDateRangePickerBottomSheet(
+          initialStartDate: state.expenseStartDate,
+          initialEndDate: state.expenseEndDate,
         );
       },
     );
@@ -260,7 +249,119 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
     );
   }
 
+  Widget _buildFilterChip({
+    required String label,
+    required String value,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primarySoft : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: 1.5,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? AppColors.primary : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterPanel(BuildContext context, AdminReportsLoaded state) {
+    final chipsList = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: _buildFilterChip(
+              label: 'All Categories',
+              value: 'All',
+              isSelected: state.selectedExpenseCategory == 'All',
+              onTap: () {
+                _cubit.updateExpenseFilters(category: 'All');
+                setState(() {
+                  _currentPage = 1;
+                });
+              },
+            ),
+          ),
+          ..._expenseCategories.map((c) {
+            final isSelected = state.selectedExpenseCategory == c;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: _buildFilterChip(
+                label: c,
+                value: c,
+                isSelected: isSelected,
+                onTap: () {
+                  _cubit.updateExpenseFilters(category: c);
+                  setState(() {
+                    _currentPage = 1;
+                  });
+                },
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+
+    final dateRangeButton = OutlinedButton.icon(
+      onPressed: () => _selectDateRange(context, state),
+      icon: const Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
+      label: Text(
+        state.expenseStartDate == null || state.expenseEndDate == null
+            ? 'Choose Date Range'
+            : '${DateFormat('d/M/yy').format(state.expenseStartDate!)} - ${DateFormat('d/M/yy').format(state.expenseEndDate!)}',
+        style: const TextStyle(
+          color: AppColors.textDark,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(color: AppColors.border, width: 1.5),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        backgroundColor: Colors.white,
+      ),
+    );
+
+    final clearDateButton = state.expenseStartDate != null
+        ? IconButton(
+            icon: const Icon(Icons.cancel, size: 18, color: AppColors.error),
+            tooltip: 'Clear Date Filter',
+            onPressed: _clearDateFilters,
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.only(left: 6),
+          )
+        : const SizedBox.shrink();
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 700;
@@ -290,66 +391,49 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
           ),
         );
 
-        final dropdownFilters = Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            DropdownButton<String>(
-              value: state.selectedExpenseCategory,
-              underline: const SizedBox(),
-              items: [
-                const DropdownMenuItem(
-                  value: 'All',
-                  child: Text('All Categories'),
-                ),
-                ..._expenseCategories.map(
-                  (c) => DropdownMenuItem(value: c, child: Text(c)),
-                ),
-              ],
-              onChanged: (val) {
-                if (val != null) {
-                  _cubit.updateExpenseFilters(category: val);
-                  setState(() {
-                    _currentPage = 1;
-                  });
-                }
-              },
-            ),
-            TextButton.icon(
-              onPressed: () => _selectDateRange(context, state),
-              icon: const Icon(Icons.date_range, size: 16),
-              label: Text(
-                state.expenseStartDate == null || state.expenseEndDate == null
-                    ? 'Choose Date Range'
-                    : '${DateFormat('d/M/yy').format(state.expenseStartDate!)} - ${DateFormat('d/M/yy').format(state.expenseEndDate!)}',
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-            if (state.expenseStartDate != null)
-              IconButton(
-                icon: const Icon(Icons.close, size: 14, color: AppColors.error),
-                onPressed: _clearDateFilters,
-                constraints: const BoxConstraints(),
-                padding: EdgeInsets.zero,
-              ),
-          ],
-        );
-
         if (isCompact) {
           return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               searchField,
               const SizedBox(height: 12),
-              dropdownFilters,
+              chipsList,
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(child: dateRangeButton),
+                        clearDateButton,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           );
         }
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [searchField, dropdownFilters],
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                searchField,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    dateRangeButton,
+                    clearDateButton,
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            chipsList,
+          ],
         );
       },
     );
@@ -828,6 +912,330 @@ class _ExpenseReportsPageState extends State<ExpenseReportsPage> {
             ],
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+class _CustomDateRangePickerBottomSheet extends StatefulWidget {
+  final DateTime? initialStartDate;
+  final DateTime? initialEndDate;
+
+  const _CustomDateRangePickerBottomSheet({
+    this.initialStartDate,
+    this.initialEndDate,
+  });
+
+  @override
+  State<_CustomDateRangePickerBottomSheet> createState() =>
+      __CustomDateRangePickerBottomSheetState();
+}
+
+class __CustomDateRangePickerBottomSheetState
+    extends State<_CustomDateRangePickerBottomSheet> {
+  DateTime? _startDate;
+  DateTime? _endDate;
+  late DateTime _visibleMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    _startDate = widget.initialStartDate;
+    _endDate = widget.initialEndDate;
+    _visibleMonth = widget.initialStartDate ?? DateTime.now();
+    _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month, 1);
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  void _onDayTapped(DateTime day) {
+    if (_startDate == null) {
+      setState(() {
+        _startDate = day;
+      });
+    } else if (_endDate == null) {
+      if (day.isBefore(_startDate!)) {
+        setState(() {
+          _startDate = day;
+        });
+      } else {
+        setState(() {
+          _endDate = day;
+        });
+      }
+    } else {
+      setState(() {
+        _startDate = day;
+        _endDate = null;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final int year = _visibleMonth.year;
+    final int month = _visibleMonth.month;
+    
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    final weekdayOfFirst = DateTime(year, month, 1).weekday;
+    final emptySlots = weekdayOfFirst == 7 ? 0 : weekdayOfFirst;
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(top: 8, bottom: 20),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'DATE RANGE',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textLight,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left, size: 20, color: AppColors.textSecondary),
+                    onPressed: () {
+                      setState(() {
+                        _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month - 1, 1);
+                      });
+                    },
+                  ),
+                  Text(
+                    DateFormat('MMMM yyyy').format(_visibleMonth),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right, size: 20, color: AppColors.textSecondary),
+                    onPressed: () {
+                      setState(() {
+                        _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month + 1, 1);
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) {
+              final isWeekend = day == 'S';
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    day,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isWeekend ? AppColors.error.withOpacity(0.7) : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              childAspectRatio: 1.2,
+              crossAxisSpacing: 0,
+              mainAxisSpacing: 4,
+            ),
+            itemCount: emptySlots + daysInMonth,
+            itemBuilder: (context, index) {
+              if (index < emptySlots) {
+                return const SizedBox.shrink();
+              }
+              final dayNumber = index - emptySlots + 1;
+              final day = DateTime(year, month, dayNumber);
+              
+              final isTodayOrBefore = day.isBefore(DateTime.now()) || _isSameDay(day, DateTime.now());
+              final isStart = _startDate != null && _isSameDay(day, _startDate!);
+              final isEnd = _endDate != null && _isSameDay(day, _endDate!);
+              final isRangeActive = _startDate != null && _endDate != null;
+              final isInRange = isRangeActive && day.isAfter(_startDate!) && day.isBefore(_endDate!);
+
+              return GestureDetector(
+                onTap: isTodayOrBefore ? () => _onDayTapped(day) : null,
+                child: Stack(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            color: (isInRange || (isEnd && isRangeActive))
+                                ? AppColors.primarySoft
+                                : Colors.transparent,
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            color: (isInRange || (isStart && isRangeActive))
+                                ? AppColors.primarySoft
+                                : Colors.transparent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (isStart || isEnd)
+                      Center(
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    Center(
+                      child: Text(
+                        dayNumber.toString(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: (isStart || isEnd || isInRange) ? FontWeight.bold : FontWeight.normal,
+                          color: !isTodayOrBefore
+                              ? AppColors.textLight.withOpacity(0.5)
+                              : ((isStart || isEnd)
+                                  ? Colors.white
+                                  : (isInRange ? AppColors.primary : AppColors.textDark)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Selected Range',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _startDate == null
+                        ? 'No dates selected'
+                        : (_endDate == null
+                            ? DateFormat('d MMM yyyy').format(_startDate!)
+                            : '${DateFormat('d MMM yyyy').format(_startDate!)} - ${DateFormat('d MMM yyyy').format(_endDate!)}'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ],
+              ),
+              if (_startDate != null || _endDate != null)
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _startDate = null;
+                      _endDate = null;
+                    });
+                  },
+                  child: const Text(
+                    'Reset',
+                    style: TextStyle(
+                      color: AppColors.error,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.border, width: 1.5),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GradientButton(
+                  onPressed: (_startDate != null && _endDate != null)
+                      ? () {
+                          Navigator.pop(
+                            context,
+                            DateTimeRange(start: _startDate!, end: _endDate!),
+                          );
+                        }
+                      : null,
+                  borderRadius: 12,
+                  height: 48,
+                  child: const Text(
+                    'Apply Range',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

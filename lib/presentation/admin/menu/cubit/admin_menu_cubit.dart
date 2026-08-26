@@ -104,21 +104,9 @@ class AdminMenuCubit extends Cubit<AdminMenuState> {
       items = items.where((item) => item.name.toLowerCase().contains(query));
     }
 
-    // Sorting
+    // Sorting (Always custom/orderIndex)
     final list = items.toList();
-    if (loadedState.sortBy == 'Custom') {
-      list.sort((a, b) => (a.orderIndex).compareTo(b.orderIndex));
-    } else if (loadedState.sortBy == 'Name') {
-      list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    } else if (loadedState.sortBy == 'Price Asc') {
-      list.sort((a, b) => a.price.compareTo(b.price));
-    } else if (loadedState.sortBy == 'Price Desc') {
-      list.sort((a, b) => b.price.compareTo(a.price));
-    } else if (loadedState.sortBy == 'Stock Asc') {
-      list.sort((a, b) => a.stock.compareTo(b.stock));
-    } else if (loadedState.sortBy == 'Stock Desc') {
-      list.sort((a, b) => b.stock.compareTo(a.stock));
-    }
+    list.sort((a, b) => (a.orderIndex).compareTo(b.orderIndex));
 
     return list;
   }

@@ -9,7 +9,7 @@ abstract class MenuRepository {
     bool includeInactive = false,
   });
   Future<MenuItem?> getMenuItemDetail(String id);
-  Future<List<MenuItem>> getRecommendedItems();
+  Future<List<MenuItem>> getRecommendedItems({bool includeInactive = false});
 
   // Admin CRUD methods
   Future<void> addMenuItem(MenuItem item);

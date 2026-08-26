@@ -11,11 +11,19 @@ class GetMenuUseCase {
     return repository.getCategories();
   }
 
-  Future<List<MenuItem>> getMenuItems({String? categoryId, String? searchQuery}) {
-    return repository.getMenuItems(categoryId: categoryId, searchQuery: searchQuery);
+  Future<List<MenuItem>> getMenuItems({
+    String? categoryId,
+    String? searchQuery,
+    bool includeInactive = false,
+  }) {
+    return repository.getMenuItems(
+      categoryId: categoryId,
+      searchQuery: searchQuery,
+      includeInactive: includeInactive,
+    );
   }
 
-  Future<List<MenuItem>> getRecommendedItems() {
-    return repository.getRecommendedItems();
+  Future<List<MenuItem>> getRecommendedItems({bool includeInactive = false}) {
+    return repository.getRecommendedItems(includeInactive: includeInactive);
   }
 }
