@@ -3,6 +3,9 @@ import 'package:lemakin_app/core/utils/app_toast.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../../../../core/utils/safari_redirect_helper.dart'
+    if (dart.library.html) '../../../../core/utils/safari_redirect_helper_web.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
@@ -54,7 +57,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Future<void> _redirectToWhatsApp(OrderEntity order) async {
     final buffer = StringBuffer();
-    buffer.writeln('Hello, I am ${order.customer.name} and I would like to order:');
+    buffer.writeln(
+      'Hello, I am ${order.customer.name} and I would like to order:',
+    );
     buffer.writeln();
     buffer.writeln('--------------------------------------');
     for (final item in order.items) {
@@ -75,8 +80,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
     buffer.writeln();
     buffer.writeln('Address: ${order.customer.address}');
     if (order.scheduledAt != null) {
-      final dateStr = '${order.scheduledAt!.day.toString().padLeft(2, '0')}/${order.scheduledAt!.month.toString().padLeft(2, '0')}/${order.scheduledAt!.year}';
-      final timeStr = '${order.scheduledAt!.hour.toString().padLeft(2, '0')}:${order.scheduledAt!.minute.toString().padLeft(2, '0')}';
+      final dateStr =
+          '${order.scheduledAt!.day.toString().padLeft(2, '0')}/${order.scheduledAt!.month.toString().padLeft(2, '0')}/${order.scheduledAt!.year}';
+      final timeStr =
+          '${order.scheduledAt!.hour.toString().padLeft(2, '0')}:${order.scheduledAt!.minute.toString().padLeft(2, '0')}';
       buffer.writeln('Delivery Schedule: $dateStr at $timeStr');
     } else {
       buffer.writeln('Delivery Schedule: Now (Order Now)');
@@ -84,7 +91,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     buffer.writeln('Order ID: ${order.id}');
     buffer.writeln();
 
-    buffer.writeln('QRIS Payment: https://lemakin/pembayaran');
+    buffer.writeln('QRIS Payment: https://lemakin.web.app/qris');
     buffer.writeln('Please confirm my order. Thank you!');
 
     final String message = buffer.toString();
@@ -92,15 +99,23 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final String encodedText = Uri.encodeComponent(message);
     final Uri url = Uri.parse('https://wa.me/$phoneNumber?text=$encodedText');
 
-    try {
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Could not launch WhatsApp URL';
-      }
-    } catch (e) {
-      if (mounted) {
-        showAppToast(context, 'Failed to open WhatsApp. Please contact admin.', type: AppToastType.error);
+    if (kIsWeb) {
+      SafariRedirectHelper.redirectTo(url.toString());
+    } else {
+      try {
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        } else {
+          throw 'Could not launch WhatsApp URL';
+        }
+      } catch (e) {
+        if (mounted) {
+          showAppToast(
+            context,
+            'Failed to open WhatsApp. Please contact admin.',
+            type: AppToastType.error,
+          );
+        }
       }
     }
   }
@@ -165,9 +180,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               }),
             ),
             textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-              ),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             ),
           ),
           child: child!,
@@ -200,10 +213,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
           title: const Text(
             'Checkout',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           flexibleSpace: Container(
             decoration: const BoxDecoration(
@@ -222,8 +232,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   context.go('/menu');
                 }
               }
-            } else if (state is CheckoutError) {
-              showAppToast(context, state.message, type: AppToastType.error);
+            } else if (state is CheckoutError || state is CheckoutFormState) {
+              if (kIsWeb) {
+                SafariRedirectHelper.closeWindow();
+              }
+              if (state is CheckoutError) {
+                showAppToast(context, state.message, type: AppToastType.error);
+              }
             }
           },
           builder: (context, state) {
@@ -258,130 +273,163 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                             const SizedBox(height: 12),
 
-                             const Text(
-                               'Name',
-                               style: TextStyle(
-                                 fontSize: 13,
-                                 fontWeight: FontWeight.bold,
-                                 color: AppColors.textSecondary,
-                               ),
-                             ),
-                             const SizedBox(height: 6),
-                             TextField(
-                               controller: _nameController,
-                               textCapitalization: TextCapitalization.words,
-                               decoration: InputDecoration(
-                                 hintText: 'Enter your name',
-                                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                                 filled: true,
-                                 fillColor: Colors.grey[100],
-                                 border: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: BorderSide.none,
-                                 ),
-                                 enabledBorder: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: BorderSide.none,
-                                 ),
-                                 focusedBorder: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                                 ),
-                               ),
-                               style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                             ),
-                             const SizedBox(height: 16),
+                            const Text(
+                              'Name',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: _nameController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: InputDecoration(
+                                hintText: 'Enter your name',
+                                hintStyle: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.primary,
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
 
-                             const Text(
-                               'Phone Number',
-                               style: TextStyle(
-                                 fontSize: 13,
-                                 fontWeight: FontWeight.bold,
-                                 color: AppColors.textSecondary,
-                               ),
-                             ),
-                             const SizedBox(height: 6),
-                             TextField(
-                               controller: _phoneController,
-                               keyboardType: TextInputType.phone,
-                               decoration: InputDecoration(
-                                 hintText: 'e.g. 08123456789',
-                                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                                 filled: true,
-                                 fillColor: Colors.grey[100],
-                                 border: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: BorderSide.none,
-                                 ),
-                                 enabledBorder: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: BorderSide.none,
-                                 ),
-                                 focusedBorder: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                                 ),
-                                 errorBorder: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: const BorderSide(color: AppColors.error, width: 1),
-                                 ),
-                                 errorText: phoneError,
-                               ),
-                               style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                             ),
-                             const SizedBox(height: 16),
+                            const Text(
+                              'Phone Number',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              decoration: InputDecoration(
+                                hintText: 'e.g. 08123456789',
+                                hintStyle: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.primary,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.error,
+                                    width: 1,
+                                  ),
+                                ),
+                                errorText: phoneError,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
 
-                             Row(
-                               children: [
-                                 const Text(
-                                   'Address',
-                                   style: TextStyle(
-                                     fontSize: 13,
-                                     fontWeight: FontWeight.bold,
-                                     color: AppColors.textSecondary,
-                                   ),
-                                 ),
-                                 const SizedBox(width: 4),
-                                 const Text(
-                                   '*',
-                                   style: TextStyle(
-                                     color: Colors.red,
-                                     fontSize: 13,
-                                     fontWeight: FontWeight.bold,
-                                   ),
-                                 ),
-                               ],
-                             ),
-                             const SizedBox(height: 6),
-                             TextField(
-                               controller: _addressController,
-                               maxLines: 2,
-                               textCapitalization: TextCapitalization.sentences,
-                               decoration: InputDecoration(
-                                 hintText: 'Enter delivery address',
-                                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                                 filled: true,
-                                 fillColor: Colors.grey[100],
-                                 border: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: BorderSide.none,
-                                 ),
-                                 enabledBorder: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: BorderSide.none,
-                                 ),
-                                 focusedBorder: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                                 ),
-                                 errorBorder: OutlineInputBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                   borderSide: const BorderSide(color: AppColors.error, width: 1),
-                                 ),
-                                 errorText: addressError,
-                               ),
-                               style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-                             ),
+                            Row(
+                              children: [
+                                const Text(
+                                  'Address',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  '*',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: _addressController,
+                              maxLines: 2,
+                              textCapitalization: TextCapitalization.sentences,
+                              decoration: InputDecoration(
+                                hintText: 'Enter delivery address',
+                                hintStyle: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.primary,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.error,
+                                    width: 1,
+                                  ),
+                                ),
+                                errorText: addressError,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textDark,
+                              ),
+                            ),
                             const SizedBox(height: 24),
 
                             const Text(
@@ -403,12 +451,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                     });
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: !_isScheduled ? AppColors.primary : AppColors.border,
+                                        color: !_isScheduled
+                                            ? AppColors.primary
+                                            : AppColors.border,
                                         width: !_isScheduled ? 1.5 : 1.0,
                                       ),
                                     ),
@@ -431,8 +484,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                           ),
                                         ),
                                         Icon(
-                                          !_isScheduled ? Icons.radio_button_checked : Icons.radio_button_off,
-                                          color: !_isScheduled ? AppColors.primary : Colors.grey,
+                                          !_isScheduled
+                                              ? Icons.radio_button_checked
+                                              : Icons.radio_button_off,
+                                          color: !_isScheduled
+                                              ? AppColors.primary
+                                              : Colors.grey,
                                           size: 20,
                                         ),
                                       ],
@@ -448,12 +505,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                     _selectDateTime();
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: _isScheduled ? AppColors.primary : AppColors.border,
+                                        color: _isScheduled
+                                            ? AppColors.primary
+                                            : AppColors.border,
                                         width: _isScheduled ? 1.5 : 1.0,
                                       ),
                                     ),
@@ -488,9 +550,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 ),
                               ],
                             ),
-                              const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                              const Divider(color: AppColors.border),
+                            const Divider(color: AppColors.border),
                             const SizedBox(height: 16),
 
                             Row(
@@ -546,7 +608,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   if (cartState.items.isEmpty) {
                                     return const AppEmptyState(
                                       title: 'No items in cart',
-                                      subtitle: 'Go back to the menu and add some dishes.',
+                                      subtitle:
+                                          'Go back to the menu and add some dishes.',
                                     );
                                   }
 
@@ -803,15 +866,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               onPressed: isBtnLoading
                                   ? null
                                   : () {
-                                      if (_isScheduled && _scheduledDateTime == null) {
-                                        showAppToast(context, 'Please select the delivery date and time.', type: AppToastType.error);
+                                      if (_isScheduled &&
+                                          _scheduledDateTime == null) {
+                                        showAppToast(
+                                          context,
+                                          'Please select the delivery date and time.',
+                                          type: AppToastType.error,
+                                        );
                                         return;
+                                      }
+                                      if (kIsWeb) {
+                                        SafariRedirectHelper.openBlankWindow();
                                       }
                                       _cubit.submitOrder(
                                         name: _nameController.text,
                                         phone: _phoneController.text,
                                         address: _addressController.text,
-                                        scheduledAt: _isScheduled ? _scheduledDateTime : null,
+                                        scheduledAt: _isScheduled
+                                            ? _scheduledDateTime
+                                            : null,
                                       );
                                     },
                               borderRadius: 12,
@@ -822,7 +895,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                       height: 20,
                                     )
                                   : Text(
-                                      _isScheduled ? 'Schedule Order' : 'Order Now',
+                                      _isScheduled
+                                          ? 'Schedule Order'
+                                          : 'Order Now',
                                       style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,

@@ -194,7 +194,8 @@ class _MenuPageState extends State<MenuPage> {
                                 final closeHour = int.parse(closeParts[0]);
                                 final closeMin = int.parse(closeParts[1]);
 
-                                final now = DateTime.now();
+                                // Force calculation using Jakarta Timezone (UTC+7)
+                                final now = DateTime.now().toUtc().add(const Duration(hours: 7));
                                 final currentMinutes =
                                     now.hour * 60 + now.minute;
                                 final openMinutes = openHour * 60 + openMin;

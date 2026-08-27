@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../../../../core/utils/app_toast.dart';
@@ -20,16 +19,6 @@ class QrisPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: AppColors.textDark),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/menu');
-            }
-          },
-        ),
         title: const Text(
           'Pembayaran QRIS',
           style: TextStyle(
@@ -87,28 +76,31 @@ class QrisPage extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: AspectRatio(
-                            aspectRatio: 0.707, // Standard QRIS aspect ratio (approx A4 width/height)
+                            aspectRatio:
+                                0.707, // Standard QRIS aspect ratio (approx A4 width/height)
                             child: Image.network(
                               qrisImageUrl,
                               fit: BoxFit.contain,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  color: Colors.grey[50],
-                                  child: const Center(
-                                    child: AppLoadingIndicator(
-                                      width: 50,
-                                      height: 50,
-                                    ),
-                                  ),
-                                );
-                              },
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      color: Colors.grey[50],
+                                      child: const Center(
+                                        child: AppLoadingIndicator(
+                                          width: 50,
+                                          height: 50,
+                                        ),
+                                      ),
+                                    );
+                                  },
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
                                   color: Colors.grey[100],
                                   child: const Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           Icons.broken_image,
@@ -150,7 +142,11 @@ class QrisPage extends StatelessWidget {
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.download_rounded, size: 20, color: Colors.white),
+                          Icon(
+                            Icons.download_rounded,
+                            size: 20,
+                            color: Colors.white,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'Unduh QRIS',

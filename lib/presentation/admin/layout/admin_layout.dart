@@ -1304,7 +1304,7 @@ class _SystemSettingsFormState extends State<_SystemSettingsForm> {
                               'logoUrl': logoController.text.trim(),
                               'isShopOpen': isShopOpen,
                               'isClosedTemporarily': isClosedTemporarily,
-                              'closedUntil': closedUntil?.toIso8601String(),
+                              'closedUntil': closedUntil?.toUtc().toIso8601String(),
                               'openingTime': openingTimeController.text.trim(),
                               'closingTime': closingTimeController.text.trim(),
                             }, SetOptions(merge: true));
