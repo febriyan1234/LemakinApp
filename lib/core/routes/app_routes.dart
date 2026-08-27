@@ -9,6 +9,7 @@ import '../../presentation/customer/menu/ui/menu_page.dart';
 import '../../presentation/customer/menu_detail/ui/menu_detail_page.dart';
 import '../../presentation/customer/checkout/ui/checkout_page.dart';
 import '../../presentation/customer/checkout/ui/order_success_page.dart';
+import '../../presentation/customer/qris/ui/qris_page.dart';
 
 // Admin pages & cubits
 import '../../presentation/admin/auth/ui/admin_login_page.dart';
@@ -30,6 +31,7 @@ class AppRoutes {
   static const String menuDetail = '/menu/:id';
   static const String checkout = '/checkout';
   static const String success = '/success';
+  static const String qris = '/qris';
 
   // Admin routes
   static const String adminLogin = '/admin/login';
@@ -66,6 +68,10 @@ class AppRoutes {
           final order = state.extra as OrderEntity?;
           return OrderSuccessPage(order: order);
         },
+      ),
+      GoRoute(
+        path: qris,
+        builder: (context, state) => const QrisPage(),
       ),
 
       // ----------------- Admin Routes -----------------
