@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <script>
     // Safe unregistration of existing service workers
     if ('serviceWorker' in navigator) {
       try {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
           for (var registration of registrations) {
             registration.unregister();
           }
@@ -19,11 +20,11 @@
     window._flutter = {};
     let actualLoader;
     Object.defineProperty(window._flutter, 'loader', {
-      get: function() { return actualLoader; },
-      set: function(val) {
+      get: function () { return actualLoader; },
+      set: function (val) {
         if (val) {
           const originalLoad = val.load;
-          val.load = function(options) {
+          val.load = function (options) {
             if (options && options.serviceWorkerSettings) {
               delete options.serviceWorkerSettings;
             }
@@ -52,7 +53,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Jajanan by Lemakin">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -61,8 +62,8 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png?v=2">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=2"/>
-  <link rel="icon" type="image/png" href="logo.png?v=2"/>
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=2" />
+  <link rel="icon" type="image/png" href="logo.png?v=2" />
 
   <title>Jajanan by Lemakin</title>
   <link rel="manifest" href="manifest.json?v=2">
@@ -71,12 +72,15 @@
     progress {
       accent-color: #FF6500 !important;
     }
+
     progress::-webkit-progress-value {
       background-color: #FF6500 !important;
     }
+
     progress::-moz-progress-bar {
       background-color: #FF6500 !important;
     }
+
     div[role="progressbar"],
     .progress,
     .progress-bar,
@@ -95,6 +99,7 @@
     }
   </style>
 </head>
+
 <body>
   <!--
     You can customize the "flutter_bootstrap.js" script.
@@ -106,4 +111,5 @@
   -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
+
 </html>

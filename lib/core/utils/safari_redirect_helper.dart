@@ -1,4 +1,6 @@
 class SafariRedirectHelper {
+  static bool isMobile() => false;
+
   static void openBlankWindow() {
     // No-op on mobile
   }

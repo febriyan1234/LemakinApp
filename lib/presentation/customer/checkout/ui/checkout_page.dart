@@ -32,6 +32,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final TextEditingController _addressController = TextEditingController();
   bool _isScheduled = false;
   DateTime? _scheduledDateTime;
+  bool _isOptionalExpanded = false;
 
   @override
   void initState() {
@@ -64,10 +65,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
     buffer.writeln('--------------------------------------');
     for (final item in order.items) {
       buffer.writeln(
-        '${item.quantity}x ${item.menuItem.name} (${item.menuItem.price.toInt()}/pcs)',
+        '${item.quantity}x ${item.menuItem.name} (${CurrencyFormatter.format(item.unitPrice)}/pcs)',
       );
       final variantsText = item.selectedVariants.values
-          .map((v) => v.name)
+          .map(
+            (v) => v.additionalPrice > 0
+                ? '${v.name} (+${CurrencyFormatter.format(v.additionalPrice)})'
+                : v.name,
+          )
           .join(' • ');
       if (variantsText.isNotEmpty) {
         buffer.writeln('\tOptions: $variantsText');
@@ -76,6 +81,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         buffer.writeln('\tNotes: "${item.notes}"');
       }
     }
+    buffer.writeln('--------------------------------------');
+    buffer.writeln('Total Price: ${CurrencyFormatter.format(order.total)}');
     buffer.writeln('--------------------------------------');
     buffer.writeln();
     buffer.writeln('Address: ${order.customer.address}');
@@ -227,9 +234,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
             if (state is CheckoutSuccess) {
               await _redirectToWhatsApp(state.order);
               if (context.mounted) {
-                await context.read<CartCubit>().clearCart();
+                // Give the browser time to process the WhatsApp redirection before navigating
+                await Future.delayed(const Duration(seconds: 2));
                 if (context.mounted) {
-                  context.go('/menu');
+                  await context.read<CartCubit>().clearCart();
+                  if (context.mounted) {
+                    context.go('/menu');
+                  }
                 }
               }
             } else if (state is CheckoutError || state is CheckoutFormState) {
@@ -238,6 +249,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
               }
               if (state is CheckoutError) {
                 showAppToast(context, state.message, type: AppToastType.error);
+              }
+              if (state is CheckoutFormState && state.phoneError != null) {
+                setState(() {
+                  _isOptionalExpanded = true;
+                });
               }
             }
           },
@@ -250,7 +266,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               phoneError = state.phoneError;
             }
 
-            final isBtnLoading = state is CheckoutLoading;
+            final isBtnLoading = state is CheckoutLoading || state is CheckoutSuccess;
 
             return Center(
               child: ConstrainedBox(
@@ -272,100 +288,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               ),
                             ),
                             const SizedBox(height: 12),
-
-                            const Text(
-                              'Name',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            TextField(
-                              controller: _nameController,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: InputDecoration(
-                                hintText: 'Enter your name',
-                                hintStyle: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 13,
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            const Text(
-                              'Phone Number',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            TextField(
-                              controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              decoration: InputDecoration(
-                                hintText: 'e.g. 08123456789',
-                                hintStyle: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 13,
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.error,
-                                    width: 1,
-                                  ),
-                                ),
-                                errorText: phoneError,
-                              ),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
 
                             Row(
                               children: [
@@ -394,7 +316,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               maxLines: 2,
                               textCapitalization: TextCapitalization.sentences,
                               decoration: InputDecoration(
-                                hintText: 'Enter delivery address',
+                                hintText: 'Blok C No. 99',
                                 hintStyle: const TextStyle(
                                   color: Colors.grey,
                                   fontSize: 13,
@@ -429,6 +351,152 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 fontSize: 14,
                                 color: AppColors.textDark,
                               ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Expand/Collapse Row for Name & Phone
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isOptionalExpanded = !_isOptionalExpanded;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.person_outline,
+                                      size: 18,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Add Optional Info (Name, Phone)',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Icon(
+                                      _isOptionalExpanded
+                                          ? Icons.keyboard_arrow_up
+                                          : Icons.keyboard_arrow_down,
+                                      color: AppColors.textSecondary,
+                                      size: 20,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            AnimatedCrossFade(
+                              firstChild: const SizedBox.shrink(),
+                              secondChild: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Name',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: _nameController,
+                                    textCapitalization:
+                                        TextCapitalization.words,
+                                    decoration: InputDecoration(
+                                      hintText: 'Enter your name',
+                                      hintStyle: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 13,
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.grey[100],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: AppColors.primary,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Phone Number',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: _phoneController,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: InputDecoration(
+                                      hintText: 'e.g. 08123456789',
+                                      hintStyle: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 13,
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.grey[100],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: AppColors.primary,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      errorBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color: AppColors.error,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      errorText: phoneError,
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              crossFadeState: _isOptionalExpanded
+                                  ? CrossFadeState.showSecond
+                                  : CrossFadeState.showFirst,
+                              duration: const Duration(milliseconds: 200),
                             ),
                             const SizedBox(height: 24),
 
@@ -875,7 +943,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         );
                                         return;
                                       }
-                                      if (kIsWeb) {
+                                      if (kIsWeb && !SafariRedirectHelper.isMobile()) {
                                         SafariRedirectHelper.openBlankWindow();
                                       }
                                       _cubit.submitOrder(
