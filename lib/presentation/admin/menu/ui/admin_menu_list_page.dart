@@ -377,7 +377,7 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                           ),
                           const SizedBox(width: 8),
                           _buildChoiceChip(
-                            label: 'Active',
+                            label: 'Tampil (Active)',
                             isSelected: currentState.selectedStatus == 'Active',
                             onTap: () {
                               _cubit.updateFilters(status: 'Active');
@@ -385,7 +385,7 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                           ),
                           const SizedBox(width: 8),
                           _buildChoiceChip(
-                            label: 'Inactive',
+                            label: 'Hidden',
                             isSelected: currentState.selectedStatus == 'Inactive',
                             onTap: () {
                               _cubit.updateFilters(status: 'Inactive');
@@ -812,19 +812,61 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                       color: AppColors.success.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text(
-                      'Active',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.success,
-                      ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.visibility, size: 10, color: AppColors.success),
+                        SizedBox(width: 4),
+                        Text(
+                          'Tampil',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
                     ),
                   )
                 else
-                  const SizedBox.shrink(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.visibility_off, size: 10, color: Colors.grey),
+                        SizedBox(width: 4),
+                        Text(
+                          'Hidden',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Row(
                   children: [
+                    IconButton(
+                      icon: Icon(
+                        item.isActive ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        color: item.isActive ? AppColors.success : Colors.grey,
+                        size: 16,
+                      ),
+                      tooltip: item.isActive ? 'Hide Menu' : 'Unhide Menu',
+                      onPressed: () => _cubit.toggleMenuStatus(item.id),
+                      style: IconButton.styleFrom(
+                        backgroundColor: (item.isActive ? AppColors.success : Colors.grey).withOpacity(0.08),
+                        padding: const EdgeInsets.all(6),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(
                         Icons.edit_outlined,
@@ -1013,21 +1055,63 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                   color: AppColors.success.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text(
-                  'Active',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.success,
-                  ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.visibility, size: 12, color: AppColors.success),
+                    SizedBox(width: 4),
+                    Text(
+                      'Tampil',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ],
                 ),
               )
             else
-              const SizedBox.shrink(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.visibility_off, size: 12, color: Colors.grey),
+                    SizedBox(width: 4),
+                    Text(
+                      'Hidden',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(width: 24),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                IconButton(
+                  icon: Icon(
+                    item.isActive ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    color: item.isActive ? AppColors.success : Colors.grey,
+                    size: 18,
+                  ),
+                  tooltip: item.isActive ? 'Hide Menu' : 'Unhide Menu',
+                  onPressed: () => _cubit.toggleMenuStatus(item.id),
+                  style: IconButton.styleFrom(
+                    backgroundColor: (item.isActive ? AppColors.success : Colors.grey).withOpacity(0.08),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(
                     Icons.edit_outlined,

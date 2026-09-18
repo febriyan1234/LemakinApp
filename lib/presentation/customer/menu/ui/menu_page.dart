@@ -612,7 +612,8 @@ class _MenuPageState extends State<MenuPage> {
                                                 .where(
                                                   (item) =>
                                                       item.categoryId ==
-                                                      category.id,
+                                                          category.id &&
+                                                      item.isActive,
                                                 )
                                                 .map(
                                                   (item) => item
@@ -629,6 +630,7 @@ class _MenuPageState extends State<MenuPage> {
                                               category.name,
                                               categoryItems,
                                               menuState.bestSellers
+                                                  .where((item) => item.isActive)
                                                   .map(
                                                     (item) => item
                                                         .withEffectivePrice(

@@ -148,10 +148,10 @@ class AdminMenuCubit extends Cubit<AdminMenuState> {
         final updatedItem = item.copyWith(isActive: !item.isActive);
         await adminMenuUseCase.updateMenuItem(updatedItem);
 
-        final newStatusStr = updatedItem.isActive ? 'Active' : 'Inactive';
-        refreshMenus(successMsg: 'Menu "${item.name}" is now $newStatusStr');
+        final newStatusStr = updatedItem.isActive ? 'Tampil (Visible)' : 'Disembunyikan (Hidden)';
+        refreshMenus(successMsg: 'Menu "${item.name}" sekarang $newStatusStr');
       } catch (e) {
-        refreshMenus(errorMsg: 'Failed to update menu status');
+        refreshMenus(errorMsg: 'Gagal mengubah status menu');
       }
     }
   }

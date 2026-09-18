@@ -1027,7 +1027,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                       ),
                       child: Column(
                         children: [
-                          // Active Status
+                          // Menu Visibility / Active Status
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -1035,7 +1035,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Active Status',
+                                    'Tampilkan Menu (Visibility)',
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
@@ -1043,7 +1043,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                                     ),
                                   ),
                                   Text(
-                                    'Allow customer orders',
+                                    'Matikan untuk hide/sembunyikan dari pelanggan',
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: AppColors.textSecondary,

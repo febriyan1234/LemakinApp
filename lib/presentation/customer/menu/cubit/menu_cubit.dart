@@ -48,10 +48,10 @@ class MenuCubit extends Cubit<MenuState> {
       final categories = await getMenuUseCase.getCategories();
       final items = await getMenuUseCase.getMenuItems(
         categoryId: 'All',
-        includeInactive: true,
+        includeInactive: false,
       );
       final recommended = await getMenuUseCase.getRecommendedItems(
-        includeInactive: true,
+        includeInactive: false,
       );
       final bestSellers = await _getBestSellers(items);
 
@@ -79,14 +79,14 @@ class MenuCubit extends Cubit<MenuState> {
         final items = await getMenuUseCase.getMenuItems(
           categoryId: currentState.selectedCategoryId,
           searchQuery: currentState.searchQuery,
-          includeInactive: true,
+          includeInactive: false,
         );
         final allItems = await getMenuUseCase.getMenuItems(
           categoryId: 'All',
-          includeInactive: true,
+          includeInactive: false,
         );
         final recommended = await getMenuUseCase.getRecommendedItems(
-          includeInactive: true,
+          includeInactive: false,
         );
         final bestSellers = await _getBestSellers(allItems);
 
@@ -117,7 +117,7 @@ class MenuCubit extends Cubit<MenuState> {
         final items = await getMenuUseCase.getMenuItems(
           categoryId: categoryId,
           searchQuery: currentState.searchQuery,
-          includeInactive: true,
+          includeInactive: false,
         );
         emit(
           currentState.copyWith(
@@ -142,7 +142,7 @@ class MenuCubit extends Cubit<MenuState> {
               ? 'All'
               : currentState.selectedCategoryId,
           searchQuery: query,
-          includeInactive: true,
+          includeInactive: false,
         );
         emit(
           currentState.copyWith(
