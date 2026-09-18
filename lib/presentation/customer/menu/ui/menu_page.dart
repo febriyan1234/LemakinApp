@@ -20,7 +20,9 @@ import '../widget/floating_cart_widget.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 
 class MenuPage extends StatefulWidget {
-  const MenuPage({super.key});
+  final String? location;
+
+  const MenuPage({super.key, this.location});
 
   @override
   State<MenuPage> createState() => _MenuPageState();
@@ -29,6 +31,23 @@ class MenuPage extends StatefulWidget {
 class _MenuPageState extends State<MenuPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isGridView = false;
+
+  String _detailRoute(String itemId, {String? editCartItemId}) {
+    final queryParams = <String, String>{};
+    if (widget.location != null && widget.location!.trim().isNotEmpty) {
+      queryParams['location'] = widget.location!.trim();
+    }
+    if (editCartItemId != null && editCartItemId.isNotEmpty) {
+      queryParams['editCartItemId'] = editCartItemId;
+    }
+    if (queryParams.isNotEmpty) {
+      final queryString = queryParams.entries
+          .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+          .join('&');
+      return '/menu/$itemId?$queryString';
+    }
+    return '/menu/$itemId';
+  }
 
   @override
   void initState() {
@@ -244,29 +263,38 @@ class _MenuPageState extends State<MenuPage> {
                                             BannerCarousel(
                                               isClosed: isCurrentlyClosed,
                                               items: (() {
-                                                final promoItems = menuState
+                                                final transformedAll = menuState
                                                     .allMenuItems
-                                                    .where(
-                                                      (item) =>
-                                                          item.isActive &&
-                                                          item.stock != 0 &&
-                                                          item.originalPrice !=
-                                                              null &&
-                                                          item.originalPrice! >
-                                                              item.price,
+                                                    .map(
+                                                      (item) => item
+                                                          .withEffectivePrice(
+                                                            widget.location,
+                                                          ),
                                                     )
                                                     .toList();
+                                                final promoItems =
+                                                    transformedAll
+                                                        .where(
+                                                          (item) =>
+                                                              item.isActive &&
+                                                              item.stock != 0 &&
+                                                              item.originalPrice !=
+                                                                  null &&
+                                                              item.originalPrice! >
+                                                                  item.price,
+                                                        )
+                                                        .toList();
 
                                                 if (promoItems.length <= 1) {
-                                                  final activeRecs = menuState
-                                                      .allMenuItems
-                                                      .where(
-                                                        (item) =>
-                                                            item.isRecommended &&
-                                                            item.isActive &&
-                                                            item.stock != 0,
-                                                      )
-                                                      .toList();
+                                                  final activeRecs =
+                                                      transformedAll
+                                                          .where(
+                                                            (item) =>
+                                                                item.isRecommended &&
+                                                                item.isActive &&
+                                                                item.stock != 0,
+                                                          )
+                                                          .toList();
                                                   for (final item
                                                       in activeRecs) {
                                                     if (!promoItems.any(
@@ -586,6 +614,12 @@ class _MenuPageState extends State<MenuPage> {
                                                       item.categoryId ==
                                                       category.id,
                                                 )
+                                                .map(
+                                                  (item) => item
+                                                      .withEffectivePrice(
+                                                        widget.location,
+                                                      ),
+                                                )
                                                 .toList();
                                             if (categoryItems.isEmpty) {
                                               return const SizedBox.shrink();
@@ -594,7 +628,14 @@ class _MenuPageState extends State<MenuPage> {
                                               context,
                                               category.name,
                                               categoryItems,
-                                              menuState.bestSellers,
+                                              menuState.bestSellers
+                                                  .map(
+                                                    (item) => item
+                                                        .withEffectivePrice(
+                                                          widget.location,
+                                                        ),
+                                                  )
+                                                  .toList(),
                                               isCurrentlyClosed,
                                             );
                                           }),
@@ -616,8 +657,22 @@ class _MenuPageState extends State<MenuPage> {
                                                             .selectedCategoryId,
                                                   )
                                                   .name,
-                                              menuState.menuItems,
-                                              menuState.bestSellers,
+                                              menuState.menuItems
+                                                  .map(
+                                                    (item) => item
+                                                        .withEffectivePrice(
+                                                          widget.location,
+                                                        ),
+                                                  )
+                                                  .toList(),
+                                              menuState.bestSellers
+                                                  .map(
+                                                    (item) => item
+                                                        .withEffectivePrice(
+                                                          widget.location,
+                                                        ),
+                                                  )
+                                                  .toList(),
                                               isCurrentlyClosed,
                                             ),
                                         ],
@@ -729,7 +784,7 @@ class _MenuPageState extends State<MenuPage> {
                                   .getItemQuantityInCart(item.id);
                               if (qty == 0) {
                                 if (item.variants.isNotEmpty) {
-                                  context.push('/menu/${item.id}');
+                                  context.push(_detailRoute(item.id));
                                 } else {
                                   context.read<CartCubit>().addToCart(
                                     CartItem(
@@ -1038,7 +1093,7 @@ class _MenuPageState extends State<MenuPage> {
                         onTap: () {
                           if (item.variants.isNotEmpty) {
                             // Item has variants — navigate to detail to choose
-                            context.push('/menu/${item.id}');
+                            context.push(_detailRoute(item.id));
                           } else {
                             // No variants — add to cart directly
                             context.read<CartCubit>().addToCart(
@@ -1134,10 +1189,10 @@ class _MenuPageState extends State<MenuPage> {
       if (matchingItems.isNotEmpty) {
         _showCartSummaryForItemBottomSheet(context, item, matchingItems);
       } else {
-        await context.push('/menu/${item.id}');
+        await context.push(_detailRoute(item.id));
       }
     } else {
-      await context.push('/menu/${item.id}');
+      await context.push(_detailRoute(item.id));
     }
   }
 
@@ -1264,7 +1319,10 @@ class _MenuPageState extends State<MenuPage> {
                                           onTap: () async {
                                             Navigator.pop(context);
                                             await context.push(
-                                              '/menu/${item.id}?editCartItemId=${cartItem.id}',
+                                              _detailRoute(
+                                                item.id,
+                                                editCartItemId: cartItem.id,
+                                              ),
                                             );
                                           },
                                           child: const Row(
@@ -1388,7 +1446,7 @@ class _MenuPageState extends State<MenuPage> {
                       child: ElevatedButton(
                         onPressed: () async {
                           Navigator.pop(context);
-                          await context.push('/menu/${item.id}');
+                          await context.push(_detailRoute(item.id));
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
@@ -1427,6 +1485,7 @@ class _MenuPageState extends State<MenuPage> {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
     final activeRecommended = state.allMenuItems
+        .map((item) => item.withEffectivePrice(widget.location))
         .where((item) => item.isRecommended && item.isActive && item.stock != 0)
         .toList();
 
@@ -1492,7 +1551,7 @@ class _MenuPageState extends State<MenuPage> {
                                 .getItemQuantityInCart(item.id);
                             if (qty == 0) {
                               if (item.variants.isNotEmpty) {
-                                context.push('/menu/${item.id}');
+                                context.push(_detailRoute(item.id));
                               } else {
                                 context.read<CartCubit>().addToCart(
                                   CartItem(

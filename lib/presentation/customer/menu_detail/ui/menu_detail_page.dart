@@ -20,11 +20,13 @@ import '../widget/variant_selector.dart';
 class MenuDetailPage extends StatefulWidget {
   final String menuItemId;
   final String? editCartItemId;
+  final String? location;
 
   const MenuDetailPage({
     super.key,
     required this.menuItemId,
     this.editCartItemId,
+    this.location,
   });
 
   @override
@@ -42,6 +44,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
     _cubit.fetchItemDetails(
       widget.menuItemId,
       editCartItemId: widget.editCartItemId,
+      location: widget.location,
     );
   }
 

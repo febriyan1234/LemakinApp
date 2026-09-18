@@ -776,13 +776,28 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                     ],
                   ),
                 ),
-                Text(
-                  CurrencyFormatter.format(item.price),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      CurrencyFormatter.format(item.price),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    if (item.upgradedPrice != null)
+                      Text(
+                        'Upgraded: ${CurrencyFormatter.format(item.upgradedPrice!)}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textLight,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -967,13 +982,28 @@ class _AdminMenuListPageState extends State<AdminMenuListPage> {
                 ],
               ),
             ),
-            Text(
-              CurrencyFormatter.format(item.price),
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  CurrencyFormatter.format(item.price),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                if (item.upgradedPrice != null)
+                  Text(
+                    'Upgraded: ${CurrencyFormatter.format(item.upgradedPrice!)}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textLight,
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 32),
             if (item.isActive)

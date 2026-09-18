@@ -65,8 +65,9 @@ class MenuItem extends Equatable {
   final String id;
   final String name;
   final String description;
-  final double price;
-  final double? originalPrice;
+  final double price; // Original Price / Regular Price
+  final double? upgradedPrice; // Upgraded Price (Optional)
+  final double? originalPrice; // Strike-through / discount reference
   final String imageUrl;
   final bool isRecommended;
   final String categoryId;
@@ -80,6 +81,7 @@ class MenuItem extends Equatable {
     required this.name,
     required this.description,
     required this.price,
+    this.upgradedPrice,
     this.originalPrice,
     required this.imageUrl,
     this.isRecommended = false,
@@ -90,11 +92,27 @@ class MenuItem extends Equatable {
     this.orderIndex = 0,
   });
 
+  /// Returns the effective price depending on the location query parameter.
+  /// If [location] == 'near', it uses [price] (Original Price).
+  /// Otherwise, it uses [upgradedPrice] (if set) or falls back to [price].
+  double getEffectivePrice(String? location) {
+    if (location?.trim().toLowerCase() == 'near') {
+      return price;
+    }
+    return upgradedPrice ?? price;
+  }
+
+  /// Returns a copy of this MenuItem where `price` is replaced by the effective price for [location].
+  MenuItem withEffectivePrice(String? location) {
+    return copyWith(price: getEffectivePrice(location));
+  }
+
   MenuItem copyWith({
     String? id,
     String? name,
     String? description,
     double? price,
+    double? upgradedPrice,
     double? originalPrice,
     String? imageUrl,
     bool? isRecommended,
@@ -109,6 +127,7 @@ class MenuItem extends Equatable {
       name: name ?? this.name,
       description: description ?? this.description,
       price: price ?? this.price,
+      upgradedPrice: upgradedPrice ?? this.upgradedPrice,
       originalPrice: originalPrice ?? this.originalPrice,
       imageUrl: imageUrl ?? this.imageUrl,
       isRecommended: isRecommended ?? this.isRecommended,
@@ -126,6 +145,7 @@ class MenuItem extends Equatable {
         name,
         description,
         price,
+        upgradedPrice,
         originalPrice,
         imageUrl,
         isRecommended,

@@ -26,6 +26,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
   late final TextEditingController _nameController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
+  late final TextEditingController _upgradedPriceController;
   late final TextEditingController _discountController;
   late final TextEditingController _stockController;
   late final TextEditingController _imageUrlController;
@@ -62,6 +63,11 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
     _priceController = TextEditingController(
       text: item != null ? CurrencyFormatter.formatString('${normalPrice.toInt()}') : '',
     );
+    _upgradedPriceController = TextEditingController(
+      text: (item != null && item.upgradedPrice != null)
+          ? CurrencyFormatter.formatString('${item.upgradedPrice!.toInt()}')
+          : '',
+    );
     _discountController = TextEditingController(
       text: (item != null && item.originalPrice != null)
           ? CurrencyFormatter.formatString('${discount.toInt()}')
@@ -90,6 +96,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _upgradedPriceController.dispose();
     _discountController.dispose();
     _stockController.dispose();
     _imageUrlController.dispose();
@@ -101,6 +108,8 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
       final name = _nameController.text.trim();
       final desc = _descriptionController.text.trim();
       final normalPrice = double.parse(_priceController.text.replaceAll('.', ''));
+      final upgradedPriceStr = _upgradedPriceController.text.trim().replaceAll('.', '');
+      final double? upgradedPrice = upgradedPriceStr.isNotEmpty ? double.tryParse(upgradedPriceStr) : null;
       final discountStr = _discountController.text.trim().replaceAll('.', '');
       final discount = discountStr.isNotEmpty ? (double.tryParse(discountStr) ?? 0.0) : 0.0;
 
@@ -116,6 +125,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
           name: name,
           description: desc,
           price: finalPrice,
+          upgradedPrice: upgradedPrice,
           originalPrice: originalPrice,
           stock: stock,
           imageUrl: imageUrl,
@@ -131,6 +141,7 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
           name: name,
           description: desc,
           price: finalPrice,
+          upgradedPrice: upgradedPrice,
           originalPrice: originalPrice,
           stock: stock,
           imageUrl: imageUrl,
@@ -750,17 +761,17 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Price & Discount Row
+                    // Price Section: Original Price & Upgraded Price
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Price Input
+                        // Original Price Input
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Price (IDR) *',
+                                'Original Price (IDR) *',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -796,13 +807,13 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        // Discount Input (Optional)
+                        // Upgraded Price Input (Optional)
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Discount Cut (Optional)',
+                                'Upgraded Price (IDR)',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -811,27 +822,24 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                               ),
                               const SizedBox(height: 8),
                               ValueListenableBuilder<TextEditingValue>(
-                                valueListenable: _discountController,
+                                valueListenable: _upgradedPriceController,
                                 builder: (context, value, child) {
                                   return TextFormField(
-                                    controller: _discountController,
+                                    controller: _upgradedPriceController,
                                     keyboardType: TextInputType.number,
                                     inputFormatters: [ThousandsSeparatorFormatter()],
                                     validator: (val) {
                                       if (val == null || val.trim().isEmpty) return null;
                                       final parsed = double.tryParse(val.trim().replaceAll('.', ''));
-                                      if (parsed == null || parsed < 0) {
-                                        return 'Cannot be negative';
-                                      }
-                                      final normalPriceStr = _priceController.text.trim().replaceAll('.', '');
-                                      final normalPrice = double.tryParse(normalPriceStr);
-                                      if (normalPrice != null && parsed >= normalPrice) {
-                                        return 'Must be < Price';
+                                      if (parsed == null || parsed <= 0) {
+                                        return 'Must be > 0';
                                       }
                                       return null;
                                     },
                                     decoration: InputDecoration(
-                                      hintText: 'e.g. 2.000',
+                                      hintText: 'Optional (e.g. 10.000)',
+                                      helperText: 'Default: Original Price',
+                                      helperStyle: const TextStyle(fontSize: 11, color: AppColors.textLight),
                                       prefixText: value.text.isNotEmpty ? 'Rp ' : null,
                                     ),
                                   );
@@ -839,6 +847,50 @@ class _AdminAddEditMenuPageState extends State<AdminAddEditMenuPage> {
                               ),
                             ],
                           ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Discount Cut Row (Optional)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Discount Cut (Optional)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _discountController,
+                          builder: (context, value, child) {
+                            return TextFormField(
+                              controller: _discountController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [ThousandsSeparatorFormatter()],
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) return null;
+                                final parsed = double.tryParse(val.trim().replaceAll('.', ''));
+                                if (parsed == null || parsed < 0) {
+                                  return 'Cannot be negative';
+                                }
+                                final normalPriceStr = _priceController.text.trim().replaceAll('.', '');
+                                final normalPrice = double.tryParse(normalPriceStr);
+                                if (normalPrice != null && parsed >= normalPrice) {
+                                  return 'Must be < Original Price';
+                                }
+                                return null;
+                              },
+                              decoration: InputDecoration(
+                                hintText: 'e.g. 2.000',
+                                prefixText: value.text.isNotEmpty ? 'Rp ' : null,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),

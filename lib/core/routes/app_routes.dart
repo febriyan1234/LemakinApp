@@ -49,13 +49,24 @@ class AppRoutes {
     initialLocation: menu,
     routes: [
       // ----------------- Customer Routes -----------------
-      GoRoute(path: menu, builder: (context, state) => const MenuPage()),
+      GoRoute(
+        path: menu,
+        builder: (context, state) {
+          final location = state.uri.queryParameters['location'];
+          return MenuPage(location: location);
+        },
+      ),
       GoRoute(
         path: menuDetail,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           final editCartItemId = state.uri.queryParameters['editCartItemId'];
-          return MenuDetailPage(menuItemId: id, editCartItemId: editCartItemId);
+          final location = state.uri.queryParameters['location'];
+          return MenuDetailPage(
+            menuItemId: id,
+            editCartItemId: editCartItemId,
+            location: location,
+          );
         },
       ),
       GoRoute(

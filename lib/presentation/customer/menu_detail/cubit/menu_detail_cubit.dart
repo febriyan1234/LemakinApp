@@ -18,11 +18,16 @@ class MenuDetailCubit extends Cubit<MenuDetailState> {
     required this.cartCubit,
   }) : super(MenuDetailInitial());
 
-  Future<void> fetchItemDetails(String id, {String? editCartItemId}) async {
+  Future<void> fetchItemDetails(
+    String id, {
+    String? editCartItemId,
+    String? location,
+  }) async {
     emit(MenuDetailLoading());
     try {
-      final item = await getMenuDetailUseCase.execute(id);
-      if (item != null) {
+      final rawItem = await getMenuDetailUseCase.execute(id);
+      if (rawItem != null) {
+        final item = rawItem.withEffectivePrice(location);
         Map<String, VariantOption> selected = {};
         int qty = 1;
 
